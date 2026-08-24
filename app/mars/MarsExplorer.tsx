@@ -8,6 +8,7 @@ import { MarsCameraController } from './camera/MarsCameraController';
 import { HUD } from './hud/HUD';
 import { useMarsStore } from './stores/marsStore';
 import { SurfacePanorama } from './surface/SurfacePanorama';
+import { MroTrajectory } from './orbit/MroTrajectory';
 
 export default function MarsExplorer() {
   const surfaceView = useMarsStore((state) => state.surfaceView);
@@ -25,6 +26,7 @@ export default function MarsExplorer() {
         <directionalLight position={[8, 4, 6]} intensity={4.2} color="#ffd6ae" />
         <Stars radius={80} depth={36} count={1700} factor={2.3} saturation={0} fade speed={0.25} />
         <Suspense fallback={null}><MarsTerrain /></Suspense>
+        <MroTrajectory />
         <MarsCameraController />
       </Canvas>
       <HUD />

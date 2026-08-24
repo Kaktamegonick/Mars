@@ -1,7 +1,8 @@
 'use client';
 
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
+import Image from 'next/image';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { getRoverStation, ROVER_STATIONS, type RoverStation } from '../data/roverStations';
 import { useMarsStore } from '../stores/marsStore';
@@ -45,20 +46,26 @@ function SurfaceLookController() {
     };
   }, [camera, gl]);
 
-  useFrame(() => {
-    camera.rotation.order = 'YXZ';
-    camera.rotation.y = yaw.current;
-    camera.rotation.x = pitch.current;
+  useFrame(({ camera: activeCamera }) => {
+    activeCamera.rotation.order = 'YXZ';
+    activeCamera.rotation.y = yaw.current;
+    activeCamera.rotation.x = pitch.current;
   });
   return null;
 }
 
 function RoverPanorama({ station }: { station: RoverStation }) {
-  const texture = useLoader(THREE.TextureLoader, station.image);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.repeat.x = -1;
-  texture.offset.x = 1;
+  const loadedTexture = useLoader(THREE.TextureLoader, station.image!);
+  const texture = useMemo(() => {
+    const panoramaTexture = loadedTexture.clone();
+    panoramaTexture.colorSpace = THREE.SRGBColorSpace;
+    panoramaTexture.wrapS = THREE.RepeatWrapping;
+    panoramaTexture.repeat.x = -1;
+    panoramaTexture.offset.x = 1;
+    panoramaTexture.needsUpdate = true;
+    return panoramaTexture;
+  }, [loadedTexture]);
+  useEffect(() => () => texture.dispose(), [texture]);
   const cylinderHeight = THREE.MathUtils.clamp((Math.PI * 20) / station.imageAspect, 12, 18);
   return (
     <mesh rotation={[0, Math.PI / 2, 0]}>
@@ -73,33 +80,53 @@ export function SurfacePanorama() {
   const activeStationId = useMarsStore((state) => state.activeStationId);
   const visitStation = useMarsStore((state) => state.visitStation);
   const station = getRoverStation(activeStationId);
+  const sceneDescription = station.viewType === 'none'
+    ? station.note
+    : `${station.region} · ${station.viewType === 'panorama' ? '360° panorama' : 'archival camera frame'} from ${station.instrument.toLowerCase()}${station.imageCount ? ` · ${station.imageCount} source image${station.imageCount === 1 ? '' : 's'}` : ''}.`;
   return (
-    <section className="surface-view" aria-label={`Perseverance rover panorama at ${station.name}`}>
-      <Canvas camera={{ position: [0, 0, 0.001], fov: 55, near: 0.01, far: 30 }} gl={{ antialias: true }} dpr={[1, 1.6]}>
-        <color attach="background" args={['#9c5c38']} />
-        <RoverPanorama station={station} />
-        <SurfaceLookController />
-      </Canvas>
+    <section className="surface-view" aria-label={`${station.rover} archive at ${station.name}`}>
+      {station.viewType === 'panorama' && (
+        <Canvas camera={{ position: [0, 0, 0.001], fov: 55, near: 0.01, far: 30 }} gl={{ antialias: true }} dpr={[1, 1.6]}>
+          <color attach="background" args={['#9c5c38']} />
+          <RoverPanorama station={station} />
+          <SurfaceLookController />
+        </Canvas>
+      )}
+      {station.viewType === 'photo' && station.image && (
+        <div className="archive-photo">
+          <div style={{ backgroundImage: `url(${station.image})` }} />
+          <Image
+            src={station.image}
+            alt={`${station.rover} camera view at ${station.name}`}
+            width={1600}
+            height={Math.round(1600 / station.imageAspect)}
+            unoptimized
+          />
+        </div>
+      )}
+      {station.viewType === 'none' && (
+        <div className="no-surface-data"><span>NO IMAGE RETURN</span><i /> <b>{station.mission}</b><small>ROVER WAS NOT DEPLOYED</small></div>
+      )}
       <header className="surface-topbar">
-        <div className="wordmark"><span className="mission-mark">P</span><div><b>PERSEVERANCE</b><small>MASTCAM-Z / {station.sol}</small></div></div>
+        <div className="wordmark"><span className="mission-mark">{station.rover.slice(0, 1)}</span><div><b>{station.rover.toUpperCase()}</b><small>{station.instrument} / {station.sol}</small></div></div>
         <button className="orbit-button" onClick={exitSurfaceView}>↑ RETURN TO ORBIT</button>
       </header>
       <aside className="surface-caption">
         <p className="panel-label">ARCHIVE SURFACE STATION</p>
         <h2>{station.name}</h2>
-        <p>{station.region} · 360° {station.colorMode.toLowerCase()} panorama assembled from {station.imageCount} Mastcam-Z images.</p>
+        <p>{sceneDescription}</p>
         <div><span>{station.credit}</span><span>{station.date}</span></div>
-        <a href={station.sourceUrl} target="_blank" rel="noreferrer">NASA SOURCE ↗</a>
+        <a href={station.sourceUrl} target="_blank" rel="noreferrer">{station.sourceLabel} SOURCE ↗</a>
       </aside>
       <nav className="surface-stations" aria-label="Rover panorama stations">
         {ROVER_STATIONS.map((item, index) => (
           <button key={item.id} className={item.id === station.id ? 'active' : ''} onClick={() => visitStation(item.id)}>
-            <span>0{index + 1}</span>{item.name}
+            <span>{String(index + 1).padStart(2, '0')}</span><b>{item.rover}</b><small>{item.name}</small>
           </button>
         ))}
       </nav>
-      <div className="surface-crosshair"><span /><i /></div>
-      <div className="surface-hint">DRAG TO LOOK AROUND · SCROLL TO ZOOM</div>
+      {station.viewType === 'panorama' && <div className="surface-crosshair"><span /><i /></div>}
+      <div className="surface-hint">{station.viewType === 'panorama' ? 'DRAG TO LOOK AROUND · SCROLL TO ZOOM' : 'AUTHENTIC MISSION ARCHIVE'}</div>
     </section>
   );
 }

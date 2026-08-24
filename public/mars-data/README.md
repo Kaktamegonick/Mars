@@ -41,3 +41,41 @@ station uses the final published waypoint reached on sol 960 and occupied while
 the panorama sequence began on sol 962.
 
 - https://services.arcgis.com/lqRTrQp2HrfnJt8U/ArcGIS/rest/services/Perseverance_Waypoints/FeatureServer/0
+
+## Verified rover-camera archive
+
+The surface selector never substitutes one rover's imagery for another. Each
+asset below is linked to the mission archive page that identifies the camera
+and rover that captured it:
+
+- `sojourner-sol25.jpg` — Sojourner forward rover camera, sol 25, looking
+  west toward the Mars Pathfinder lander.
+  https://science.nasa.gov/photojournal/looking-westward-at-the-lander/
+- `spirit-landing.jpg` — Spirit left navigation camera panorama at the Gusev
+  Crater landing site.
+  https://science.nasa.gov/photojournal/left-panorama-of-spirits-landing-site/
+- `opportunity-lion-king.jpg` — Opportunity Pancam “Lion King” panorama,
+  assembled from 558 images at Eagle Crater on sols 58–60.
+  https://science.nasa.gov/resource/lion-king-panorama/
+- `curiosity-landing-360.jpg` — Curiosity navigation-camera 360-degree view
+  from Bradbury Landing on sol 2.
+  https://science.nasa.gov/resource/curiosity-takes-it-all-in/
+- `zhurong-landing-360.jpg` — Zhurong navigation and terrain camera panorama
+  captured from the Tianwen-1 landing platform before rover deployment.
+  https://www.cnsa.gov.cn/n6758824/n6759009/n6760412/n6760413/c6840380/content.html
+
+PrOP-M is included as a historical site without an image. Mars 3 transmitted
+for only 14.5 seconds and the rover was never deployed, so no rover-camera
+photograph exists.
+
+- https://science.nasa.gov/resource/could-this-be-the-mars-soviet-3-lander/
+
+## MRO reference orbit
+
+The orange orbital path is an accelerated visual model of Mars Reconnaissance
+Orbiter's near-polar science orbit, using NASA's published 255–320 km altitude
+range, approximately 92.7-degree inclination, and 112-minute period. It is not
+represented as live telemetry or a date-specific ephemeris.
+
+- https://science.nasa.gov/mission/mars-reconnaissance-orbiter/
+- https://science.nasa.gov/wp-content/uploads/2024/03/44745_mro-arrival.pdf

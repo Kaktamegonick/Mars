@@ -30,23 +30,30 @@ export function HUD() {
 
       <section className="hero-copy">
         <p>MRO / MGS DATASET</p><h1>Touch the<br />red planet.</h1>
-        <span>Drag to orbit · scroll to descend · click terrain for rover view</span>
+        <span>Drag to orbit · scroll to descend · choose a verified rover site</span>
       </section>
 
-      <nav className="rover-sites" aria-label="Perseverance surface stations">
-        <p className="panel-label">PERSEVERANCE / VERIFIED SITES</p>
+      <nav className="rover-sites" aria-label="Verified Mars rover surface stations">
+        <p className="panel-label">ROVERS / VERIFIED ARCHIVE</p>
         {ROVER_STATIONS.map((station, index) => (
           <button key={station.id} className={station.id === activeStationId ? 'active' : ''} onClick={() => visitStation(station.id)}>
-            <span>0{index + 1}</span>
-            <b>{station.name}</b>
-            <small>{station.sol} · {station.latitude.toFixed(3)}°N</small>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <b>{station.rover} · {station.name}</b>
+            <small>{station.year} · {formatLatitude(station.latitude)} · {station.status}</small>
           </button>
         ))}
-        <i>CLICK A SITE TO DESCEND INTO ITS REAL PANORAMA</i>
+        <i>EVERY IMAGE IS ATTRIBUTED TO THE CAMERA THAT ACTUALLY CAPTURED IT</i>
       </nav>
 
+      <aside className="orbit-legend">
+        <p className="panel-label">MRO / REFERENCE ORBIT</p>
+        <div><span className="orbit-swatch" /> <b>255–320 KM · 92.7°</b></div>
+        <small>NEAR-POLAR SCIENCE ORBIT · 112 MIN<br />ANIMATED AT ACCELERATED SPEED</small>
+        <a href="https://science.nasa.gov/wp-content/uploads/2024/03/44745_mro-arrival.pdf" target="_blank" rel="noreferrer">NASA ORBIT SOURCE ↗</a>
+      </aside>
+
       <aside className="telemetry">
-        <p className="panel-label">NAV / JEZERO</p>
+        <p className="panel-label">NAV / GLOBAL</p>
         <dl>
           <div><dt>LATITUDE</dt><dd>{formatLatitude(cameraPoint.latitude)}</dd></div>
           <div><dt>LONGITUDE</dt><dd>{formatLongitude(cameraPoint.longitude)}</dd></div>

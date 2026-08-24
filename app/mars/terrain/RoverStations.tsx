@@ -15,6 +15,7 @@ export function RoverStations() {
         const normal = position.clone().normalize();
         const quaternion = new THREE.Quaternion().setFromUnitVectors(UP, normal);
         const active = station.id === activeStationId;
+        const hasSurfaceImage = station.viewType !== 'none';
         return (
           <group
             key={station.id}
@@ -26,11 +27,11 @@ export function RoverStations() {
           >
             <mesh>
               <ringGeometry args={[active ? 0.038 : 0.028, active ? 0.052 : 0.040, 48]} />
-              <meshBasicMaterial color={active ? '#ff7845' : '#f1e8dc'} transparent opacity={0.96} side={THREE.DoubleSide} depthTest={false} />
+              <meshBasicMaterial color={active ? '#ff7845' : hasSurfaceImage ? '#f1e8dc' : '#81766e'} transparent opacity={0.96} side={THREE.DoubleSide} />
             </mesh>
             <mesh position={[0, 0, 0.004]}>
               <circleGeometry args={[0.009, 24]} />
-              <meshBasicMaterial color="#e86131" depthTest={false} />
+              <meshBasicMaterial color={hasSurfaceImage ? '#e86131' : '#81766e'} />
             </mesh>
           </group>
         );

@@ -9,19 +9,23 @@ import { RoverStations } from './RoverStations';
 
 export function MarsTerrain() {
   const meshRef = useRef<THREE.Mesh>(null);
-  const [color, elevation] = useLoader(THREE.TextureLoader, ['/mars-data/mars-color.jpg', '/mars-data/mars-elevation.jpg']);
+  const [loadedColor, elevation] = useLoader(THREE.TextureLoader, ['/mars-data/mars-color.jpg', '/mars-data/mars-elevation.jpg']);
+  const color = useMemo(() => {
+    const terrainTexture = loadedColor.clone();
+    terrainTexture.colorSpace = THREE.SRGBColorSpace;
+    terrainTexture.anisotropy = 8;
+    terrainTexture.needsUpdate = true;
+    return terrainTexture;
+  }, [loadedColor]);
   const geometry = useMemo(() => createMarsGeometry(elevation.image as HTMLImageElement), [elevation]);
   const hover = useMarsStore((state) => state.hover);
   const selected = useMarsStore((state) => state.selected);
   const setHover = useMarsStore((state) => state.setHover);
   const select = useMarsStore((state) => state.select);
-  color.colorSpace = THREE.SRGBColorSpace;
-  color.anisotropy = 8;
-
   useEffect(() => {
     if (meshRef.current) meshRef.current.userData.terrain = true;
-    return () => geometry.dispose();
-  }, [geometry]);
+    return () => { geometry.dispose(); color.dispose(); };
+  }, [color, geometry]);
 
   const pointFromEvent = (event: ThreeEvent<PointerEvent>) => {
     const position = event.point.clone();
