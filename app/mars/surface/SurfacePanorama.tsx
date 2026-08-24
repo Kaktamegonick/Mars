@@ -13,10 +13,13 @@ function SurfaceLookController({ command }: { command: ViewCommand }) {
   const { gl } = useThree();
   const yaw = useRef(-1.2);
   const pitch = useRef(-0.03);
-  const fov = useRef(45);
+  const targetYaw = useRef(-1.2);
+  const targetPitch = useRef(-0.03);
+  const targetFov = useRef(45);
+  const currentFov = useRef(45);
 
   const changeFov = useCallback((amount: number) => {
-    fov.current = THREE.MathUtils.clamp(fov.current + amount, 26, 68);
+    targetFov.current = THREE.MathUtils.clamp(targetFov.current + amount, 26, 68);
   }, []);
 
   useEffect(() => {
@@ -24,9 +27,9 @@ function SurfaceLookController({ command }: { command: ViewCommand }) {
     if (command.action === 'zoom-in') changeFov(-8);
     if (command.action === 'zoom-out') changeFov(8);
     if (command.action === 'reset') {
-      yaw.current = -1.2;
-      pitch.current = -0.03;
-      fov.current = 45;
+      targetYaw.current = -1.2;
+      targetPitch.current = -0.03;
+      targetFov.current = 45;
     }
   }, [changeFov, command]);
 
@@ -55,8 +58,8 @@ function SurfaceLookController({ command }: { command: ViewCommand }) {
         return;
       }
       if (!dragging) return;
-      yaw.current -= (event.clientX - previousX) * 0.0032;
-      pitch.current = THREE.MathUtils.clamp(pitch.current - (event.clientY - previousY) * 0.0024, -0.72, 0.62);
+      targetYaw.current -= (event.clientX - previousX) * 0.0035;
+      targetPitch.current = THREE.MathUtils.clamp(targetPitch.current - (event.clientY - previousY) * 0.0027, -0.72, 0.62);
       previousX = event.clientX;
       previousY = event.clientY;
     };
@@ -84,13 +87,16 @@ function SurfaceLookController({ command }: { command: ViewCommand }) {
     };
   }, [changeFov, gl]);
 
-  useFrame(({ camera: activeCamera }) => {
+  useFrame(({ camera: activeCamera }, delta) => {
+    yaw.current = THREE.MathUtils.damp(yaw.current, targetYaw.current, 13, delta);
+    pitch.current = THREE.MathUtils.damp(pitch.current, targetPitch.current, 13, delta);
+    currentFov.current = THREE.MathUtils.damp(currentFov.current, targetFov.current, 11, delta);
     activeCamera.rotation.order = 'YXZ';
     activeCamera.rotation.y = yaw.current;
     activeCamera.rotation.x = pitch.current;
     const perspective = activeCamera as THREE.PerspectiveCamera;
-    if (perspective.fov !== fov.current) {
-      perspective.fov = fov.current;
+    if (Math.abs(perspective.fov - currentFov.current) > 0.001) {
+      perspective.fov = currentFov.current;
       perspective.updateProjectionMatrix();
     }
   });
@@ -104,8 +110,6 @@ function RoverPanorama({ station, onReady }: { station: RoverStation; onReady: (
     const panoramaTexture = loadedTexture.clone();
     panoramaTexture.colorSpace = THREE.SRGBColorSpace;
     panoramaTexture.wrapS = THREE.RepeatWrapping;
-    panoramaTexture.repeat.x = -1;
-    panoramaTexture.offset.x = 1;
     panoramaTexture.anisotropy = Math.min(8, maxAnisotropy);
     panoramaTexture.minFilter = THREE.LinearMipmapLinearFilter;
     panoramaTexture.magFilter = THREE.LinearFilter;
@@ -117,45 +121,17 @@ function RoverPanorama({ station, onReady }: { station: RoverStation; onReady: (
     const frame = requestAnimationFrame(onReady);
     return () => cancelAnimationFrame(frame);
   }, [onReady, texture]);
-  const cylinderHeight = (Math.PI * 20) / station.imageAspect;
-  return (
-    <mesh rotation={[0, Math.PI / 2, 0]}>
-      <cylinderGeometry args={[10, 10, cylinderHeight, 160, 1, true]} />
-      <meshBasicMaterial map={texture} side={THREE.BackSide} toneMapped={false} />
-    </mesh>
-  );
-}
-
-const SKY_VERTEX_SHADER = `
-  varying float vHeight;
-  void main() {
-    vHeight = normalize(position).y;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const SKY_FRAGMENT_SHADER = `
-  varying float vHeight;
-  void main() {
-    vec3 zenith = vec3(0.24, 0.105, 0.055);
-    vec3 upperSky = vec3(0.48, 0.245, 0.13);
-    vec3 horizon = vec3(0.72, 0.42, 0.25);
-    vec3 ground = vec3(0.16, 0.065, 0.03);
-    float upperBlend = smoothstep(0.02, 0.78, vHeight);
-    vec3 sky = mix(horizon, upperSky, upperBlend);
-    sky = mix(sky, zenith, smoothstep(0.68, 1.0, vHeight));
-    vec3 color = mix(ground, sky, smoothstep(-0.28, 0.02, vHeight));
-    gl_FragColor = vec4(color, 1.0);
-  }
-`;
-
-function SurfaceSky() {
+  const uniforms = useMemo(() => ({
+    panorama: { value: texture },
+    imageAspect: { value: station.imageAspect },
+  }), [station.imageAspect, texture]);
   return (
     <mesh>
-      <sphereGeometry args={[11.5, 96, 48]} />
+      <sphereGeometry args={[11.5, 160, 96]} />
       <shaderMaterial
-        vertexShader={SKY_VERTEX_SHADER}
-        fragmentShader={SKY_FRAGMENT_SHADER}
+        uniforms={uniforms}
+        vertexShader={PANORAMA_VERTEX_SHADER}
+        fragmentShader={PANORAMA_FRAGMENT_SHADER}
         side={THREE.BackSide}
         depthWrite={false}
         toneMapped={false}
@@ -163,6 +139,54 @@ function SurfaceSky() {
     </mesh>
   );
 }
+
+const PANORAMA_VERTEX_SHADER = `
+  varying vec3 vDirection;
+  void main() {
+    vDirection = normalize(position);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const PANORAMA_FRAGMENT_SHADER = `
+  uniform sampler2D panorama;
+  uniform float imageAspect;
+  varying vec3 vDirection;
+  const float PI = 3.141592653589793;
+
+  void main() {
+    vec3 direction = normalize(vDirection);
+    float yaw = atan(direction.z, direction.x);
+    float elevation = atan(direction.y, length(direction.xz));
+    float u = fract(0.75 - yaw / (2.0 * PI));
+    float sourceV = 0.5 + tan(elevation) * imageAspect / (2.0 * PI);
+    float edgeV = clamp(sourceV, 0.004, 0.996);
+
+    vec3 photo = texture2D(panorama, vec2(u, edgeV)).rgb;
+    vec3 softEdge = (
+      texture2D(panorama, vec2(fract(u - 0.008), edgeV)).rgb +
+      texture2D(panorama, vec2(fract(u - 0.003), edgeV)).rgb +
+      photo * 2.0 +
+      texture2D(panorama, vec2(fract(u + 0.003), edgeV)).rgb +
+      texture2D(panorama, vec2(fract(u + 0.008), edgeV)).rgb
+    ) / 6.0;
+
+    float outside = max(-sourceV, sourceV - 1.0);
+    float extension = smoothstep(0.0, 0.9, outside);
+    vec3 zenith = vec3(0.22, 0.095, 0.048);
+    vec3 ground = vec3(0.13, 0.048, 0.022);
+    vec3 continuation = sourceV > 1.0
+      ? mix(softEdge, zenith, extension)
+      : mix(softEdge, ground, extension);
+    float photoMask = smoothstep(-0.035, 0.055, sourceV)
+      * (1.0 - smoothstep(0.945, 1.035, sourceV));
+    vec3 color = mix(continuation, photo, photoMask);
+    float horizonHaze = exp(-abs(elevation) * 9.0);
+    color += vec3(0.025, 0.011, 0.005) * horizonHaze;
+    gl_FragColor = vec4(color, 1.0);
+    #include <colorspace_fragment>
+  }
+`;
 
 export function SurfacePanorama() {
   const exitSurfaceView = useMarsStore((state) => state.exitSurfaceView);
@@ -221,7 +245,6 @@ export function SurfacePanorama() {
       {station.viewType === 'panorama' && (
         <Canvas camera={{ position: [0, 0, 0.001], fov: 45, near: 0.01, far: 30 }} gl={{ antialias: true }} dpr={[1, 2]}>
           <color attach="background" args={['#7a4129']} />
-          <SurfaceSky />
           <Suspense fallback={null}><RoverPanorama station={station} onReady={markMediaReady} /></Suspense>
           <SurfaceLookController command={viewCommand} />
         </Canvas>

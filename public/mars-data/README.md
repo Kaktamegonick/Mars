@@ -89,10 +89,11 @@ resolution. NASA notes that the grain is inherent to the rover camera's roughly
 3-milliradian-per-pixel angular resolution; the interface therefore avoids
 stretching it to the full screen and labels the original size.
 
-Panoramic assets are projected onto a cylindrical camera surface using their
-exact source aspect ratio. The cylinder height is derived directly from its
-circumference and the image dimensions; no minimum or maximum height stretching
-is applied.
+Panoramic assets are sampled on a full spherical camera dome with a cylindrical
+source-projection shader. Each view ray maps directly into the mosaic using its
+exact source aspect ratio, avoiding geometry stretch. Beyond the source's real
+vertical coverage, edge pixels transition gradually into neutral sky or ground
+tones so the archive strip has no visible rectangular boundary.
 
 ## MRO reference orbit
 
