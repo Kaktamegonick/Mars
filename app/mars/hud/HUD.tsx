@@ -36,13 +36,13 @@ export function HUD() {
         <div className="top-actions">
           <button className="surface-button" onClick={() => visitStation(activeStationId)}>↓ DESCEND · {activeStation.rover.toUpperCase()}</button>
           <button className="orbit-button" onClick={orbitOut} aria-label="Return to orbit">↑ ORBIT</button>
-          <div className="live-pill locked"><i /> DESCENT LOCKED</div>
+          <div className="live-pill locked"><i /> VERIFIED SITES ONLY</div>
         </div>
       </header>
 
       <section className="hero-copy">
         <p>ORBITAL CARTOGRAPHY / VERIFIED SURFACE ARCHIVE</p><h1>Touch the<br /><em>red planet.</em></h1>
-        <span>Orbit anywhere · surface descent only at verified rover sites</span>
+        <span>Explore the globe · click a rover flag to reach an authentic camera view</span>
         <div className="mission-path"><b>01</b><span>EXPLORE ORBIT</span><i /><b>02</b><span>CHOOSE ROVER SITE</span></div>
       </section>
 

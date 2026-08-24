@@ -2,35 +2,73 @@
 
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
 import Image from 'next/image';
-import { useEffect, useMemo, useRef } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { getRoverRoute, getRoverStation, type RoverStation } from '../data/roverStations';
 import { useMarsStore } from '../stores/marsStore';
 
-function SurfaceLookController() {
-  const { camera, gl } = useThree();
+type ViewCommand = { action: 'zoom-in' | 'zoom-out' | 'reset'; key: number };
+
+function SurfaceLookController({ command }: { command: ViewCommand }) {
+  const { gl } = useThree();
   const yaw = useRef(-1.2);
   const pitch = useRef(-0.03);
+  const fov = useRef(55);
+
+  const changeFov = useCallback((amount: number) => {
+    fov.current = THREE.MathUtils.clamp(fov.current + amount, 28, 72);
+  }, []);
+
+  useEffect(() => {
+    if (!command.key) return;
+    if (command.action === 'zoom-in') changeFov(-8);
+    if (command.action === 'zoom-out') changeFov(8);
+    if (command.action === 'reset') {
+      yaw.current = -1.2;
+      pitch.current = -0.03;
+      fov.current = 55;
+    }
+  }, [changeFov, command]);
 
   useEffect(() => {
     const element = gl.domElement;
     let dragging = false;
     let previousX = 0;
     let previousY = 0;
-    const down = (event: PointerEvent) => { dragging = true; previousX = event.clientX; previousY = event.clientY; element.setPointerCapture(event.pointerId); };
+    let pinchDistance: number | null = null;
+    const pointers = new Map<number, PointerEvent>();
+    const down = (event: PointerEvent) => {
+      pointers.set(event.pointerId, event);
+      dragging = pointers.size === 1;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      element.setPointerCapture(event.pointerId);
+    };
     const move = (event: PointerEvent) => {
+      pointers.set(event.pointerId, event);
+      if (pointers.size === 2) {
+        const [first, second] = [...pointers.values()];
+        const distance = Math.hypot(first.clientX - second.clientX, first.clientY - second.clientY);
+        if (pinchDistance !== null) changeFov((pinchDistance - distance) * 0.08);
+        pinchDistance = distance;
+        dragging = false;
+        return;
+      }
       if (!dragging) return;
       yaw.current -= (event.clientX - previousX) * 0.0032;
       pitch.current = THREE.MathUtils.clamp(pitch.current - (event.clientY - previousY) * 0.0024, -0.72, 0.62);
       previousX = event.clientX;
       previousY = event.clientY;
     };
-    const up = (event: PointerEvent) => { dragging = false; if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId); };
+    const up = (event: PointerEvent) => {
+      pointers.delete(event.pointerId);
+      dragging = false;
+      pinchDistance = null;
+      if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
+    };
     const wheel = (event: WheelEvent) => {
       event.preventDefault();
-      const perspective = camera as THREE.PerspectiveCamera;
-      perspective.fov = THREE.MathUtils.clamp(perspective.fov + event.deltaY * 0.018, 28, 72);
-      perspective.updateProjectionMatrix();
+      changeFov(event.deltaY * 0.018);
     };
     element.addEventListener('pointerdown', down);
     element.addEventListener('pointermove', move);
@@ -44,17 +82,22 @@ function SurfaceLookController() {
       element.removeEventListener('pointercancel', up);
       element.removeEventListener('wheel', wheel);
     };
-  }, [camera, gl]);
+  }, [changeFov, gl]);
 
   useFrame(({ camera: activeCamera }) => {
     activeCamera.rotation.order = 'YXZ';
     activeCamera.rotation.y = yaw.current;
     activeCamera.rotation.x = pitch.current;
+    const perspective = activeCamera as THREE.PerspectiveCamera;
+    if (perspective.fov !== fov.current) {
+      perspective.fov = fov.current;
+      perspective.updateProjectionMatrix();
+    }
   });
   return null;
 }
 
-function RoverPanorama({ station }: { station: RoverStation }) {
+function RoverPanorama({ station, onReady }: { station: RoverStation; onReady: () => void }) {
   const loadedTexture = useLoader(THREE.TextureLoader, station.image!);
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy());
   const texture = useMemo(() => {
@@ -70,6 +113,10 @@ function RoverPanorama({ station }: { station: RoverStation }) {
     return panoramaTexture;
   }, [loadedTexture, maxAnisotropy]);
   useEffect(() => () => texture.dispose(), [texture]);
+  useEffect(() => {
+    const frame = requestAnimationFrame(onReady);
+    return () => cancelAnimationFrame(frame);
+  }, [onReady, texture]);
   const cylinderHeight = THREE.MathUtils.clamp((Math.PI * 20) / station.imageAspect, 12, 18);
   return (
     <mesh rotation={[0, Math.PI / 2, 0]}>
@@ -126,26 +173,53 @@ export function SurfacePanorama() {
   const routeIndex = route.stations.findIndex((item) => item.id === station.id);
   const previousStation = route.stations[routeIndex - 1];
   const nextStation = route.stations[routeIndex + 1];
+  const [mediaReady, setMediaReady] = useState(station.viewType === 'none');
+  const [uiHidden, setUiHidden] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [viewCommand, setViewCommand] = useState<ViewCommand>({ action: 'reset', key: 0 });
+  const markMediaReady = useCallback(() => setMediaReady(true), []);
+  const sendViewCommand = useCallback((action: ViewCommand['action']) => {
+    setViewCommand((current) => ({ action, key: current.key + 1 }));
+  }, []);
+
+  useEffect(() => {
+    const updateFullscreen = () => setFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', updateFullscreen);
+    return () => document.removeEventListener('fullscreenchange', updateFullscreen);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const action = document.fullscreenElement
+      ? document.exitFullscreen()
+      : document.documentElement.requestFullscreen();
+    action.catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const followRoute = (event: KeyboardEvent) => {
       if (event.key === 'ArrowLeft' && previousStation) visitStation(previousStation.id);
       if (event.key === 'ArrowRight' && nextStation) visitStation(nextStation.id);
+      if (event.key === '+' || event.key === '=') sendViewCommand('zoom-in');
+      if (event.key === '-' || event.key === '_') sendViewCommand('zoom-out');
+      if (event.key === '0') sendViewCommand('reset');
+      if (event.key.toLowerCase() === 'h') setUiHidden((hidden) => !hidden);
+      if (event.key.toLowerCase() === 'f') toggleFullscreen();
+      if (event.key === 'Escape') setUiHidden(false);
     };
     window.addEventListener('keydown', followRoute);
     return () => window.removeEventListener('keydown', followRoute);
-  }, [nextStation, previousStation, visitStation]);
+  }, [nextStation, previousStation, sendViewCommand, toggleFullscreen, visitStation]);
   const sceneDescription = station.viewType === 'none'
     ? station.note
     : `${station.region} · ${station.viewType === 'panorama' ? '360° panorama' : 'archival camera frame'} from ${station.instrument.toLowerCase()}${station.imageCount ? ` · ${station.imageCount} source image${station.imageCount === 1 ? '' : 's'}` : ''}.`;
   return (
-    <section className="surface-view" aria-label={`${station.rover} archive at ${station.name}`}>
+    <section className={`surface-view${uiHidden ? ' ui-hidden' : ''}`} aria-label={`${station.rover} archive at ${station.name}`}>
       {station.viewType === 'panorama' && (
         <Canvas camera={{ position: [0, 0, 0.001], fov: 55, near: 0.01, far: 30 }} gl={{ antialias: true }} dpr={[1, 2]}>
           <color attach="background" args={['#7a4129']} />
           <SurfaceSky />
-          <RoverPanorama station={station} />
-          <SurfaceLookController />
+          <Suspense fallback={null}><RoverPanorama station={station} onReady={markMediaReady} /></Suspense>
+          <SurfaceLookController command={viewCommand} />
         </Canvas>
       )}
       {station.viewType === 'photo' && station.image && (
@@ -157,6 +231,7 @@ export function SurfacePanorama() {
             width={station.nativeWidth ?? 1600}
             height={station.nativeHeight ?? Math.round(1600 / station.imageAspect)}
             unoptimized
+            onLoad={markMediaReady}
           />
           {station.nativeWidth && station.nativeHeight && (
             <span className="archive-resolution">ORIGINAL CAMERA RESOLUTION · {station.nativeWidth} × {station.nativeHeight}</span>
@@ -166,10 +241,25 @@ export function SurfacePanorama() {
       {station.viewType === 'none' && (
         <div className="no-surface-data"><span>NO IMAGE RETURN</span><i /> <b>{station.mission}</b><small>ROVER WAS NOT DEPLOYED</small></div>
       )}
+      {!mediaReady && (
+        <div className="surface-loading" role="status" aria-live="polite">
+          <i /><span>RECONSTRUCTING CAMERA VIEW</span><small>{station.rover.toUpperCase()} · {station.instrument}</small>
+        </div>
+      )}
       <header className="surface-topbar">
         <div className="wordmark"><span className="mission-mark">{station.rover.slice(0, 1)}</span><div><b>{station.rover.toUpperCase()}</b><small>{station.instrument} / {station.sol}</small></div></div>
         <button className="orbit-button" onClick={exitSurfaceView}>↑ RETURN TO ORBIT</button>
       </header>
+      {station.viewType === 'panorama' && (
+        <nav className="surface-tools" aria-label="Panorama view controls">
+          <button onClick={() => sendViewCommand('zoom-out')} aria-label="Zoom out">−</button>
+          <button onClick={() => sendViewCommand('reset')} aria-label="Reset view">◎</button>
+          <button onClick={() => sendViewCommand('zoom-in')} aria-label="Zoom in">+</button>
+          <button onClick={toggleFullscreen} aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}>{fullscreen ? '↙' : '↗'}</button>
+          <button onClick={() => setUiHidden(true)} aria-label="Hide interface">H</button>
+        </nav>
+      )}
+      <button className="surface-reveal" onClick={() => setUiHidden(false)}>SHOW INTERFACE · H</button>
       <aside className="surface-caption">
         <p className="panel-label">ARCHIVE SURFACE STATION</p>
         <h2>{station.name}</h2>
@@ -191,7 +281,7 @@ export function SurfacePanorama() {
         <button disabled={!nextStation} onClick={() => nextStation && visitStation(nextStation.id)} aria-label="Next camera stop">→</button>
       </div>
       {station.viewType === 'panorama' && <div className="surface-crosshair"><span /><i /></div>}
-      <div className="surface-hint">{station.viewType === 'panorama' ? 'DRAG TO LOOK AROUND · SCROLL TO ZOOM' : 'AUTHENTIC MISSION ARCHIVE'}</div>
+      <div className="surface-hint">{station.viewType === 'panorama' ? 'DRAG / SWIPE TO LOOK · PINCH / SCROLL TO ZOOM' : 'AUTHENTIC MISSION ARCHIVE'}</div>
     </section>
   );
 }

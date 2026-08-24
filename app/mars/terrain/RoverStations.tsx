@@ -1,3 +1,4 @@
+import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import * as THREE from 'three';
@@ -47,6 +48,11 @@ function StationMarker({ station, active, onVisit }: { station: RoverStation; ac
         <sphereGeometry args={[0.0042, 12, 8]} />
         <meshBasicMaterial color="#f1e8dc" />
       </mesh>
+      {active && (
+        <Html center position={[0, 0, 0.12]} distanceFactor={7} className="station-label">
+          <span>{station.rover.toUpperCase()}</span><b>{station.name}</b><small>{hasSurfaceImage ? 'CLICK FLAG TO DESCEND' : 'NO CAMERA RETURN'}</small>
+        </Html>
+      )}
     </group>
   );
 }
