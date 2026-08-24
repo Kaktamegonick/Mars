@@ -21,6 +21,7 @@ type ActiveFlight = {
   rotation: THREE.Quaternion;
   quick: boolean;
   enterSurface: boolean;
+  regionalOverview: boolean;
 };
 
 export function MarsCameraController() {
@@ -31,6 +32,7 @@ export function MarsCameraController() {
   const fpsTimer = useRef(0);
   const { camera, scene } = useThree();
   const flight = useMarsStore((state) => state.flight);
+  const routeOverview = useMarsStore((state) => state.routeOverview);
   const clearFlight = useMarsStore((state) => state.clearFlight);
   const enterSurfaceView = useMarsStore((state) => state.enterSurfaceView);
   const setTelemetry = useMarsStore((state) => state.setTelemetry);
@@ -48,7 +50,9 @@ export function MarsCameraController() {
     if (flight.desiredAltitude !== undefined) finalAltitude = flight.desiredAltitude;
     finalAltitude = enterSurface
       ? Math.max(3, Math.min(finalAltitude, 120_000))
-      : Math.max(ORBITAL_DESCENT_LIMIT, Math.min(finalAltitude, 12_500_000));
+      : flight.regionalOverview
+        ? Math.max(20_000, Math.min(finalAltitude, ORBITAL_DESCENT_LIMIT))
+        : Math.max(ORBITAL_DESCENT_LIMIT, Math.min(finalAltitude, 12_500_000));
     activeFlight.current = {
       key: flight.requestedAt,
       elapsed: 0,
@@ -61,6 +65,7 @@ export function MarsCameraController() {
       rotation: new THREE.Quaternion().setFromUnitVectors(startDirection, endDirection),
       quick: flight.quick,
       enterSurface,
+      regionalOverview: flight.regionalOverview ?? false,
     };
     controls.current.enabled = false;
   }, [camera, flight]);
@@ -90,7 +95,7 @@ export function MarsCameraController() {
       }
     }
 
-    if (!surfaceDescentInProgress && camera.position.length() < MINIMUM_ORBIT_RADIUS) {
+    if (!surfaceDescentInProgress && !routeOverview && !currentFlight && camera.position.length() < MINIMUM_ORBIT_RADIUS) {
       camera.position.normalize().multiplyScalar(MINIMUM_ORBIT_RADIUS);
     }
 
@@ -131,7 +136,7 @@ export function MarsCameraController() {
       enableDamping
       dampingFactor={0.065}
       enablePan={false}
-      minDistance={ORBITAL_DESCENT_LIMIT / METERS_PER_UNIT}
+      minDistance={(routeOverview ? 12_000 : ORBITAL_DESCENT_LIMIT) / METERS_PER_UNIT}
       maxDistance={18}
       zoomToCursor
       rotateSpeed={0.42}

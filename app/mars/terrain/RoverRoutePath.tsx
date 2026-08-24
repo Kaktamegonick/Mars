@@ -32,13 +32,29 @@ export function RoverRoutePath() {
 
   if (points.length < 2) return null;
   return (
-    <Line
-      points={points}
-      color="#ff7845"
-      lineWidth={1.6}
-      transparent
-      opacity={0.78}
-      depthTest
-    />
+    <group name="perseverance-drive-path">
+      <Line
+        points={points}
+        color="#2c0b03"
+        lineWidth={5.4}
+        transparent
+        opacity={0.7}
+        depthTest
+      />
+      <Line
+        points={points}
+        color="#ff7845"
+        lineWidth={2.4}
+        transparent
+        opacity={0.98}
+        depthTest
+      />
+      {points.filter((_, index) => index % 7 === 0).map((point, index) => (
+        <mesh key={index} position={point}>
+          <sphereGeometry args={[0.007, 10, 8]} />
+          <meshBasicMaterial color="#ffe5d4" />
+        </mesh>
+      ))}
+    </group>
   );
 }

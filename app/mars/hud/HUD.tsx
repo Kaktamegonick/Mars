@@ -17,6 +17,8 @@ export function HUD() {
   const terrainNotice = useMarsStore((state) => state.terrainNotice);
   const flight = useMarsStore((state) => state.flight);
   const orbitOut = useMarsStore((state) => state.orbitOut);
+  const routeOverview = useMarsStore((state) => state.routeOverview);
+  const viewPerseveranceRoute = useMarsStore((state) => state.viewPerseveranceRoute);
   const activeStationId = useMarsStore((state) => state.activeStationId);
   const visitStation = useMarsStore((state) => state.visitStation);
   const activeStation = getRoverStation(activeStationId);
@@ -34,17 +36,32 @@ export function HUD() {
       <header className="topbar">
         <div className="wordmark"><span className="mission-mark">M</span><div><b>MARS</b><small>EXPLORER / MISSION 01</small></div></div>
         <div className="top-actions">
+          <button className="route-button" onClick={viewPerseveranceRoute}>↗ PERSEVERANCE PATH</button>
           <button className="surface-button" onClick={() => visitStation(activeStationId)}>↓ DESCEND · {activeStation.rover.toUpperCase()}</button>
           <button className="orbit-button" onClick={orbitOut} aria-label="Return to orbit">↑ ORBIT</button>
           <div className="live-pill locked"><i /> VERIFIED SITES ONLY</div>
         </div>
       </header>
 
-      <section className="hero-copy">
+      {!routeOverview && <section className="hero-copy">
         <p>ORBITAL CARTOGRAPHY / VERIFIED SURFACE ARCHIVE</p><h1>Touch the<br /><em>red planet.</em></h1>
         <span>Explore the globe · click a rover flag to reach an authentic camera view</span>
         <div className="mission-path"><b>01</b><span>EXPLORE ORBIT</span><i /><b>02</b><span>CHOOSE ROVER SITE</span></div>
-      </section>
+      </section>}
+
+      {routeOverview && (
+        <aside className="route-overview-card">
+          <p className="panel-label">PERSEVERANCE / PUBLISHED DRIVE PATH</p>
+          <h2>Landing → Airey Hill</h2>
+          <p>The orange line follows the rover&apos;s recorded mobility waypoints from sol 0 through sol 960.</p>
+          <ol>
+            <li><span>01</span><b>Octavia E. Butler Landing</b><small>START · SOL 0</small></li>
+            <li><span>02</span><b>Belva Crater</b><small>CAMERA STOP · SOL 772</small></li>
+            <li><span>03</span><b>Airey Hill</b><small>CAMERA STOP · SOL 960</small></li>
+          </ol>
+          <button onClick={orbitOut}>× EXIT PATH VIEW</button>
+        </aside>
+      )}
 
       <button
         className="catalog-toggle"
@@ -111,7 +128,7 @@ export function HUD() {
         </div>
       )}
       <div className="scale"><span /> {altitude > 1_000_000 ? '1,000 KM' : altitude > 10_000 ? '10 KM' : altitude > 100 ? '100 M' : '10 M'}</div>
-      <div className="statusbar"><span>REGION: {selected ? 'SELECTED TERRAIN' : 'GLOBAL MARS'}</span><span>DESCENT: VERIFIED SITES ONLY</span><span>MODE: {mode}</span><span>FPS: {fps}</span></div>
+      <div className="statusbar"><span>REGION: {routeOverview ? 'JEZERO DRIVE CORRIDOR' : selected ? 'SELECTED TERRAIN' : 'GLOBAL MARS'}</span><span>DESCENT: VERIFIED SITES ONLY</span><span>MODE: {routeOverview ? 'ROUTE OVERVIEW' : mode}</span><span>FPS: {fps}</span></div>
     </>
   );
 }
