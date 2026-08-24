@@ -22,7 +22,7 @@ export function MarsTerrain() {
   const hover = useMarsStore((state) => state.hover);
   const selected = useMarsStore((state) => state.selected);
   const setHover = useMarsStore((state) => state.setHover);
-  const select = useMarsStore((state) => state.select);
+  const rejectTerrainVisit = useMarsStore((state) => state.rejectTerrainVisit);
   useEffect(() => {
     if (meshRef.current) meshRef.current.userData.terrain = true;
     return () => { geometry.dispose(); color.dispose(); };
@@ -42,8 +42,8 @@ export function MarsTerrain() {
         geometry={geometry}
         onPointerMove={(event) => { event.stopPropagation(); setHover(pointFromEvent(event)); }}
         onPointerOut={() => setHover(null)}
-        onClick={(event) => { event.stopPropagation(); if (event.delta < 5) select(pointFromEvent(event)); }}
-        onDoubleClick={(event) => { event.stopPropagation(); select(pointFromEvent(event), true); }}
+        onClick={(event) => { event.stopPropagation(); if (event.delta < 5) rejectTerrainVisit(); }}
+        onDoubleClick={(event) => { event.stopPropagation(); rejectTerrainVisit(); }}
       >
         <meshStandardMaterial map={color} roughness={0.98} metalness={0} />
       </mesh>

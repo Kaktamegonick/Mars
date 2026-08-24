@@ -14,6 +14,7 @@ export function HUD() {
   const zoom = useMarsStore((state) => state.zoom);
   const mode = useMarsStore((state) => state.mode);
   const fps = useMarsStore((state) => state.fps);
+  const terrainNotice = useMarsStore((state) => state.terrainNotice);
   const flight = useMarsStore((state) => state.flight);
   const orbitOut = useMarsStore((state) => state.orbitOut);
   const activeStationId = useMarsStore((state) => state.activeStationId);
@@ -97,6 +98,13 @@ export function HUD() {
       )}
 
       <div className={`flight-status ${flight ? 'visible' : ''}`}><span /> {flight?.enterSurface ? 'DESCENDING TO VERIFIED ROVER SITE' : 'REPOSITIONING IN SAFE ORBIT'}</div>
+      {terrainNotice > 0 && (
+        <div key={terrainNotice} className="surface-notice" role="status">
+          <span>DESCENT UNAVAILABLE</span>
+          <b>WE HAVEN’T BEEN HERE YET</b>
+          <small>CHOOSE A VERIFIED ROVER SITE TO REACH THE SURFACE</small>
+        </div>
+      )}
       <div className="scale"><span /> {altitude > 1_000_000 ? '1,000 KM' : altitude > 10_000 ? '10 KM' : altitude > 100 ? '100 M' : '10 M'}</div>
       <div className="statusbar"><span>REGION: {selected ? 'SELECTED TERRAIN' : 'GLOBAL MARS'}</span><span>DESCENT: VERIFIED SITES ONLY</span><span>MODE: {mode}</span><span>FPS: {fps}</span></div>
     </>

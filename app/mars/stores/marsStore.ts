@@ -28,9 +28,11 @@ type MarsState = {
   zoom: number;
   mode: string;
   fps: number;
+  terrainNotice: number;
   flight: Flight | null;
   setHover: (point: MarsPoint | null) => void;
   select: (point: MarsPoint, quick?: boolean) => void;
+  rejectTerrainVisit: () => void;
   orbitOut: () => void;
   setTelemetry: (payload: Partial<Pick<MarsState, 'cameraPoint' | 'altitude' | 'zoom' | 'mode' | 'fps'>>) => void;
   clearFlight: () => void;
@@ -49,11 +51,13 @@ export const useMarsStore = create<MarsState>((set) => ({
   zoom: 1,
   mode: 'ORBITAL',
   fps: 60,
+  terrainNotice: 0,
   flight: null,
   surfaceView: false,
   activeStationId: 'airey',
   setHover: (hover) => set({ hover }),
   select: (selected, quick = false) => set({ selected, flight: { destination: selected.position.clone(), requestedAt: performance.now(), quick } }),
+  rejectTerrainVisit: () => set({ terrainNotice: performance.now() }),
   orbitOut: () => set((state) => ({
     flight: {
       destination: state.cameraPoint.position.clone(),

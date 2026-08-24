@@ -7,6 +7,7 @@ import { useMarsStore } from '../stores/marsStore';
 import { cameraMode, cartesianToMars, DISPLACEMENT_UNITS, MARS_RADIUS, METERS_PER_UNIT } from '../utils/coordinates';
 
 const ORBITAL_DESCENT_LIMIT = 320_000;
+const MINIMUM_ORBIT_RADIUS = MARS_RADIUS + ORBITAL_DESCENT_LIMIT / METERS_PER_UNIT;
 
 type ActiveFlight = {
   key: number;
@@ -68,6 +69,7 @@ export function MarsCameraController() {
     const control = controls.current;
     if (!control) return;
     const currentFlight = activeFlight.current;
+    const surfaceDescentInProgress = currentFlight?.enterSurface ?? false;
     if (currentFlight) {
       currentFlight.elapsed += Math.min(delta, 0.05);
       const raw = Math.min(1, currentFlight.elapsed / currentFlight.duration);
@@ -84,8 +86,12 @@ export function MarsCameraController() {
         activeFlight.current = null;
         control.enabled = true;
         clearFlight();
-        if (shouldEnterSurface) enterSurfaceView();
+        if (shouldEnterSurface) { enterSurfaceView(); return; }
       }
+    }
+
+    if (!surfaceDescentInProgress && camera.position.length() < MINIMUM_ORBIT_RADIUS) {
+      camera.position.normalize().multiplyScalar(MINIMUM_ORBIT_RADIUS);
     }
 
     const inward = camera.position.clone().negate().normalize();
@@ -125,7 +131,7 @@ export function MarsCameraController() {
       enableDamping
       dampingFactor={0.065}
       enablePan={false}
-      minDistance={MARS_RADIUS + ORBITAL_DESCENT_LIMIT / METERS_PER_UNIT}
+      minDistance={ORBITAL_DESCENT_LIMIT / METERS_PER_UNIT}
       maxDistance={18}
       zoomToCursor
       rotateSpeed={0.42}

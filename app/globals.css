@@ -67,6 +67,11 @@ body { overflow:hidden; font-family:var(--font-geist-mono), ui-monospace, monosp
 .flight-status.visible { opacity:1; transform:translate(-50%,0); }
 .flight-status span { display:inline-block; width:34px; height:1px; margin:0 9px 2px 0; background:var(--ember); animation:flight-pulse 1s ease-in-out infinite; }
 @keyframes flight-pulse { 50% { width:8px; opacity:.35; } }
+.surface-notice { position:absolute; z-index:6; left:50%; top:50%; min-width:min(420px,calc(100vw - 36px)); padding:20px 24px; transform:translate(-50%,-44%); border:1px solid rgba(232,97,49,.48); border-left:3px solid var(--ember); background:rgba(8,4,2,.9); box-shadow:0 30px 100px rgba(0,0,0,.56); backdrop-filter:blur(16px); text-align:center; pointer-events:none; animation:surface-notice 2.8s ease both; }
+.surface-notice span { display:block; margin-bottom:9px; color:var(--ember); font-size:7px; letter-spacing:.22em; }
+.surface-notice b { display:block; font:500 19px/1.1 var(--font-geist-sans); letter-spacing:.05em; }
+.surface-notice small { display:block; margin-top:10px; color:rgba(241,232,220,.46); font-size:7px; letter-spacing:.11em; }
+@keyframes surface-notice { 0%{opacity:0;transform:translate(-50%,-38%) scale(.97)} 12%,72%{opacity:1;transform:translate(-50%,-44%) scale(1)} 100%{opacity:0;transform:translate(-50%,-50%) scale(.98)} }
 .surface-view { position:fixed; inset:0; overflow:hidden; background:#9c5c38; }
 .surface-view canvas { position:absolute!important; inset:0; cursor:grab; }
 .surface-view canvas:active { cursor:grabbing; }
