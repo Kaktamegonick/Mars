@@ -14,9 +14,11 @@ type Flight = {
   requestedAt: number;
   quick: boolean;
   desiredAltitude?: number;
+  enterSurface?: boolean;
 };
 
 type MarsState = {
+  surfaceView: boolean;
   hover: MarsPoint | null;
   selected: MarsPoint | null;
   cameraPoint: MarsPoint;
@@ -30,6 +32,8 @@ type MarsState = {
   orbitOut: () => void;
   setTelemetry: (payload: Partial<Pick<MarsState, 'cameraPoint' | 'altitude' | 'zoom' | 'mode' | 'fps'>>) => void;
   clearFlight: () => void;
+  enterSurfaceView: () => void;
+  exitSurfaceView: () => void;
 };
 
 const JEZERO = { position: new THREE.Vector3(), latitude: 18.38, longitude: 77.58, elevation: -2620 };
@@ -43,8 +47,18 @@ export const useMarsStore = create<MarsState>((set) => ({
   mode: 'ORBITAL',
   fps: 60,
   flight: null,
+  surfaceView: false,
   setHover: (hover) => set({ hover }),
-  select: (selected, quick = false) => set({ selected, flight: { destination: selected.position.clone(), requestedAt: performance.now(), quick } }),
+  select: (selected, quick = false) => set({
+    selected,
+    flight: {
+      destination: selected.position.clone(),
+      requestedAt: performance.now(),
+      quick,
+      desiredAltitude: 3,
+      enterSurface: true,
+    },
+  }),
   orbitOut: () => set((state) => ({
     flight: {
       destination: state.cameraPoint.position.clone(),
@@ -55,4 +69,6 @@ export const useMarsStore = create<MarsState>((set) => ({
   })),
   setTelemetry: (payload) => set(payload),
   clearFlight: () => set({ flight: null }),
+  enterSurfaceView: () => set({ surfaceView: true, flight: null, mode: 'ROVER' }),
+  exitSurfaceView: () => set({ surfaceView: false, mode: 'ORBITAL', altitude: 1_800_000 }),
 }));

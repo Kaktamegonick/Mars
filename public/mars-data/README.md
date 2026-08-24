@@ -16,3 +16,12 @@ Sources:
 - https://github.com/jeromeetienne/threex.planets
 - http://planetpixelemporium.com/mars.html
 - https://astrogeology.usgs.gov/search/map/Mars/GlobalSurveyor/MOLA/Mars_MGS_MOLA_DEM_mosaic_global_463m
+
+## Perseverance surface panorama
+
+`perseverance-airey-hill.jpg` is NASA Photojournal image PIA26080: a 360-degree
+natural-color panorama from Airey Hill in Jezero Crater. It was assembled from
+993 Mastcam-Z images captured by Perseverance on November 3, 4, and 6, 2023
+(sols 962, 963, and 965). Credit: NASA/JPL-Caltech/ASU/MSSS.
+
+- https://science.nasa.gov/photojournal/perseverances-360-degree-view-from-airey-hill/

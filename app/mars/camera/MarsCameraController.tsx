@@ -17,6 +17,7 @@ type ActiveFlight = {
   destination: THREE.Vector3;
   rotation: THREE.Quaternion;
   quick: boolean;
+  enterSurface: boolean;
 };
 
 export function MarsCameraController() {
@@ -28,6 +29,7 @@ export function MarsCameraController() {
   const { camera, scene } = useThree();
   const flight = useMarsStore((state) => state.flight);
   const clearFlight = useMarsStore((state) => state.clearFlight);
+  const enterSurfaceView = useMarsStore((state) => state.enterSurfaceView);
   const setTelemetry = useMarsStore((state) => state.setTelemetry);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export function MarsCameraController() {
     const altitude = Math.max(3, (startPosition.length() - MARS_RADIUS) * METERS_PER_UNIT);
     let finalAltitude = altitude > 500_000 ? 120_000 : altitude > 10_000 ? altitude * 0.45 : altitude * 0.7;
     if (flight.quick) finalAltitude = Math.max(3, Math.min(5_000, altitude * 0.06));
-    if (flight.desiredAltitude) finalAltitude = flight.desiredAltitude;
+    if (flight.desiredAltitude !== undefined) finalAltitude = flight.desiredAltitude;
     finalAltitude = Math.max(3, Math.min(finalAltitude, 120_000));
     activeFlight.current = {
       key: flight.requestedAt,
@@ -52,6 +54,7 @@ export function MarsCameraController() {
       destination: flight.destination.clone(),
       rotation: new THREE.Quaternion().setFromUnitVectors(startDirection, endDirection),
       quick: flight.quick,
+      enterSurface: flight.enterSurface ?? false,
     };
     controls.current.enabled = false;
   }, [camera, flight]);
@@ -72,9 +75,11 @@ export function MarsCameraController() {
       control.target.copy(currentFlight.startTarget).lerp(currentFlight.destination, eased);
       camera.lookAt(control.target);
       if (raw >= 1) {
+        const shouldEnterSurface = currentFlight.enterSurface;
         activeFlight.current = null;
         control.enabled = true;
         clearFlight();
+        if (shouldEnterSurface) enterSurfaceView();
       }
     }
 

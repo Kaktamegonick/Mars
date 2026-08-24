@@ -7,8 +7,11 @@ import { MarsTerrain } from './terrain/MarsTerrain';
 import { MarsCameraController } from './camera/MarsCameraController';
 import { HUD } from './hud/HUD';
 import { useMarsStore } from './stores/marsStore';
+import { SurfacePanorama } from './surface/SurfacePanorama';
 
 export default function MarsExplorer() {
+  const surfaceView = useMarsStore((state) => state.surfaceView);
+  if (surfaceView) return <SurfacePanorama />;
   return (
     <main className="explorer-shell">
       <Canvas

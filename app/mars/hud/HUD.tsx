@@ -13,12 +13,14 @@ export function HUD() {
   const fps = useMarsStore((state) => state.fps);
   const flight = useMarsStore((state) => state.flight);
   const orbitOut = useMarsStore((state) => state.orbitOut);
+  const enterSurfaceView = useMarsStore((state) => state.enterSurfaceView);
 
   return (
     <>
       <header className="topbar">
         <div className="wordmark"><span className="mission-mark">M</span><div><b>MARS</b><small>EXPLORER / MISSION 01</small></div></div>
         <div className="top-actions">
+          <button className="surface-button" onClick={enterSurfaceView}>↓ ROVER VIEW</button>
           <button className="orbit-button" onClick={orbitOut} aria-label="Return to orbit">↑ ORBIT</button>
           <div className="live-pill"><i /> LIVE TERRAIN</div>
         </div>
@@ -26,7 +28,7 @@ export function HUD() {
 
       <section className="hero-copy">
         <p>MRO / MGS DATASET</p><h1>Touch the<br />red planet.</h1>
-        <span>Drag to orbit · scroll to descend · click terrain to travel</span>
+        <span>Drag to orbit · scroll to descend · click terrain for rover view</span>
       </section>
 
       <aside className="telemetry">
@@ -48,7 +50,7 @@ export function HUD() {
         </aside>
       )}
 
-      <div className={`flight-status ${flight ? 'visible' : ''}`}><span /> TRAVELLING TO TARGET</div>
+      <div className={`flight-status ${flight ? 'visible' : ''}`}><span /> DESCENDING TO ROVER STATION</div>
       <div className="scale"><span /> {altitude > 1_000_000 ? '1,000 KM' : altitude > 10_000 ? '10 KM' : altitude > 100 ? '100 M' : '10 M'}</div>
       <div className="statusbar"><span>REGION: {selected ? 'SELECTED TERRAIN' : 'JEZERO CRATER'}</span><span>MODE: {mode}</span><span>FPS: {fps}</span></div>
     </>
