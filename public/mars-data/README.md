@@ -42,6 +42,13 @@ the panorama sequence began on sol 962.
 
 - https://services.arcgis.com/lqRTrQp2HrfnJt8U/ArcGIS/rest/services/Perseverance_Waypoints/FeatureServer/0
 
+The interactive rover-route line uses published Perseverance mobility
+waypoints through sol 960, simplified to every fourth record for rendering.
+This covers the three verified camera stops currently included in the app. The
+latest mission route and drive distance remain available on NASA's live map.
+
+- https://mars.nasa.gov/maps/location/?mission=M20
+
 ## Verified rover-camera archive
 
 The surface selector never substitutes one rover's imagery for another. Each

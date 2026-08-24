@@ -7,6 +7,7 @@ import { TargetMarker } from '../hud/TargetMarker';
 import { createMarsGeometry } from './createMarsGeometry';
 import { RoverStations } from './RoverStations';
 import { MarsAtmosphere } from './MarsAtmosphere';
+import { RoverRoutePath } from './RoverRoutePath';
 
 export function MarsTerrain() {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -49,6 +50,7 @@ export function MarsTerrain() {
       </mesh>
       {hover && <TargetMarker position={hover.position} />}
       {selected && <TargetMarker position={selected.position} selected />}
+      <RoverRoutePath />
       <RoverStations />
       <MarsAtmosphere />
     </group>

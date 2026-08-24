@@ -91,12 +91,21 @@ body { overflow:hidden; font-family:var(--font-geist-mono), ui-monospace, monosp
 .surface-caption>div { display:flex; justify-content:space-between; gap:16px; margin-top:15px; font-size:7px; color:rgba(241,232,220,.48); letter-spacing:.1em; }
 .surface-caption>a { display:inline-block; margin-top:12px; color:var(--ember); font-size:7px; letter-spacing:.13em; text-decoration:none; }
 .surface-stations { position:absolute; z-index:4; right:34px; top:105px; width:250px; max-height:calc(100vh - 150px); overflow-y:auto; scrollbar-width:thin; border:1px solid rgba(241,232,220,.18); background:rgba(9,4,2,.5); backdrop-filter:blur(10px); }
+.surface-stations>p { display:flex; justify-content:space-between; margin:0; padding:10px 12px; border-bottom:1px solid rgba(241,232,220,.12); color:rgba(241,232,220,.46); font-size:7px; letter-spacing:.12em; }
+.surface-stations>p b { color:var(--ember); }
 .surface-stations button { width:100%; display:grid; grid-template-columns:26px 1fr; grid-template-rows:auto auto; gap:2px 10px; padding:9px 12px; border:0; border-bottom:1px solid rgba(241,232,220,.1); background:transparent; color:rgba(241,232,220,.62); text-align:left; cursor:pointer; }
 .surface-stations button:last-child { border-bottom:0; }
 .surface-stations button span { grid-row:1/3; align-self:center; color:var(--ember); font:500 8px/1 var(--font-geist-mono); }
 .surface-stations button b { font:600 8px/1.15 var(--font-geist-sans); letter-spacing:.04em; }
 .surface-stations button small { color:rgba(241,232,220,.38); font:400 7px/1.2 var(--font-geist-mono); }
 .surface-stations button:hover,.surface-stations button.active { background:rgba(232,97,49,.16); color:#fff; }
+.route-controls { position:absolute; z-index:5; left:50%; bottom:32px; display:grid; grid-template-columns:42px minmax(190px,260px) 42px; align-items:stretch; transform:translateX(-50%); border:1px solid rgba(241,232,220,.22); background:rgba(8,4,2,.68); backdrop-filter:blur(14px); box-shadow:0 20px 60px rgba(0,0,0,.35); }
+.route-controls>button { border:0; background:rgba(232,97,49,.12); color:var(--cream); font:400 20px/1 var(--font-geist-sans); cursor:pointer; transition:background .2s,color .2s; }
+.route-controls>button:hover:not(:disabled) { background:var(--ember); color:#160904; }
+.route-controls>button:disabled { color:rgba(241,232,220,.18); cursor:not-allowed; }
+.route-controls>div { padding:9px 14px; border-left:1px solid rgba(241,232,220,.12); border-right:1px solid rgba(241,232,220,.12); text-align:center; }
+.route-controls span,.route-controls small { display:block; color:rgba(241,232,220,.42); font-size:6px; letter-spacing:.12em; }
+.route-controls b { display:block; margin:4px 0; color:var(--ember); font-size:9px; letter-spacing:.1em; }
 .surface-crosshair { position:absolute; z-index:4; left:50%; top:50%; width:26px; height:26px; transform:translate(-50%,-50%); pointer-events:none; }
 .surface-crosshair span,.surface-crosshair i { position:absolute; left:50%; top:50%; background:rgba(241,232,220,.75); transform:translate(-50%,-50%); }
 .surface-crosshair span { width:26px; height:1px; }
@@ -106,4 +115,4 @@ body { overflow:hidden; font-family:var(--font-geist-mono), ui-monospace, monosp
 .scale span { display:block; width:100px; height:5px; margin:0 auto 7px; border-left:1px solid var(--cream); border-right:1px solid var(--cream); border-top:1px solid var(--cream); }
 .statusbar { position:absolute; z-index:3; left:0; right:0; bottom:0; display:flex; gap:32px; padding:11px 34px; border-top:1px solid rgba(241,232,220,.12); background:rgba(5,3,1,.38); backdrop-filter:blur(8px); font-size:7px; letter-spacing:.15em; color:rgba(241,232,220,.42); pointer-events:none; }
 .statusbar span:last-child { margin-left:auto; }
-@media (max-width:760px) { .hero-copy{left:20px;top:20%;transform:none;max-width:calc(100vw - 40px)}.hero-copy h1{font-size:43px}.mission-path{display:none}.topbar,.surface-topbar{padding:18px 20px}.live-pill,.surface-button{display:none}.catalog-toggle{right:16px;top:84px;min-width:220px}.mission-drawer{right:16px;top:84px;width:min(320px,calc(100vw - 32px));max-height:calc(100vh - 132px)}.statusbar{padding:11px 18px}.statusbar span:nth-child(2),.statusbar span:nth-child(3){display:none}.target-readout{display:none}.scale{display:none}.archive-photo img{width:100vw;max-height:70vh}.surface-caption{left:18px;bottom:18px;width:calc(100vw - 36px)}.surface-stations{right:18px;top:86px;width:210px;max-height:42vh}.surface-hint{display:none} }
+@media (max-width:760px) { .hero-copy{left:20px;top:20%;transform:none;max-width:calc(100vw - 40px)}.hero-copy h1{font-size:43px}.mission-path{display:none}.topbar,.surface-topbar{padding:18px 20px}.live-pill,.surface-button{display:none}.catalog-toggle{right:16px;top:84px;min-width:220px}.mission-drawer{right:16px;top:84px;width:min(320px,calc(100vw - 32px));max-height:calc(100vh - 132px)}.statusbar{padding:11px 18px}.statusbar span:nth-child(2),.statusbar span:nth-child(3){display:none}.target-readout{display:none}.scale{display:none}.archive-photo img{width:100vw;max-height:70vh}.surface-caption{left:18px;bottom:92px;width:calc(100vw - 36px)}.surface-stations{right:18px;top:86px;width:210px;max-height:34vh}.route-controls{bottom:18px;grid-template-columns:38px minmax(170px,1fr) 38px;width:calc(100vw - 36px)}.surface-hint{display:none} }

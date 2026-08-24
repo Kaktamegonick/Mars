@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useMarsStore } from '../stores/marsStore';
-import { getRoverStation, ROVER_STATIONS } from '../data/roverStations';
+import { getRoverStation, ROVER_ROUTES } from '../data/roverStations';
 import { formatDistance, formatElevation, formatLatitude, formatLongitude } from '../utils/coordinates';
 
 export function HUD() {
@@ -52,21 +52,26 @@ export function HUD() {
         aria-controls="mission-index"
         onClick={() => setCatalogOpen((open) => !open)}
       >
-        <b>CHOOSE ROVER SITE</b><span>{ROVER_STATIONS.length.toString().padStart(2, '0')} VERIFIED DESCENT POINTS</span><i>{catalogOpen ? '×' : '+'}</i>
+        <b>CHOOSE ROVER</b><span>{ROVER_ROUTES.length.toString().padStart(2, '0')} MISSIONS · VERIFIED CAMERAS</span><i>{catalogOpen ? '×' : '+'}</i>
       </button>
 
       {catalogOpen && (
         <aside className="mission-drawer" id="mission-index">
-          <div className="drawer-head"><p className="panel-label">ROVERS / VERIFIED ARCHIVE</p><button onClick={() => setCatalogOpen(false)} aria-label="Close mission index">×</button></div>
-          <nav className="rover-sites" aria-label="Verified Mars rover surface stations">
-            {ROVER_STATIONS.map((station, index) => (
-              <button key={station.id} className={station.id === activeStationId ? 'active' : ''} onClick={() => { setCatalogOpen(false); visitStation(station.id); }}>
+          <div className="drawer-head"><p className="panel-label">ROVERS / CHRONOLOGICAL</p><button onClick={() => setCatalogOpen(false)} aria-label="Close mission index">×</button></div>
+          <nav className="rover-sites" aria-label="Verified Mars rover routes">
+            {ROVER_ROUTES.map((route, index) => {
+              const firstStation = route.stations[0];
+              const cameraStops = route.stations.filter((station) => station.image).length;
+              const active = route.rover === activeStation.rover;
+              return (
+              <button key={route.rover} className={active ? 'active' : ''} onClick={() => { setCatalogOpen(false); visitStation(firstStation.id); }}>
                 <span>{String(index + 1).padStart(2, '0')}</span>
-                <b>{station.rover} · {station.name}</b>
-                <small>{station.year} · {formatLatitude(station.latitude)} · {station.status}</small>
+                <b>{route.rover} · {route.mission}</b>
+                <small>{route.year} · {cameraStops} CAMERA STOP{cameraStops === 1 ? '' : 'S'} · {route.operator}</small>
               </button>
-            ))}
-            <i>EVERY IMAGE IS ATTRIBUTED TO THE CAMERA THAT ACTUALLY CAPTURED IT</i>
+              );
+            })}
+            <i>SELECT A ROVER, THEN FOLLOW ITS VERIFIED CAMERA STOPS WITH THE ROUTE ARROWS</i>
           </nav>
 
           <section className="orbit-legend">

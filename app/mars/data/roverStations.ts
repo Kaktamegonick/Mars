@@ -114,6 +114,25 @@ export const ROVER_STATIONS: RoverStation[] = [
   },
 ];
 
+export type RoverRoute = {
+  rover: string;
+  mission: string;
+  operator: string;
+  year: string;
+  stations: RoverStation[];
+};
+
+export const ROVER_ROUTES: RoverRoute[] = ROVER_STATIONS.reduce<RoverRoute[]>((routes, station) => {
+  const existing = routes.find((route) => route.rover === station.rover);
+  if (existing) existing.stations.push(station);
+  else routes.push({ rover: station.rover, mission: station.mission, operator: station.operator, year: station.year, stations: [station] });
+  return routes;
+}, []);
+
+export function getRoverRoute(rover: string) {
+  return ROVER_ROUTES.find((route) => route.rover === rover) ?? ROVER_ROUTES[0];
+}
+
 export function getRoverStation(id: RoverStationId) {
   return ROVER_STATIONS.find((station) => station.id === id)
     ?? ROVER_STATIONS.find((station) => station.id === 'airey')

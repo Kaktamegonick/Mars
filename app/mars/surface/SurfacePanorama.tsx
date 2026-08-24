@@ -4,7 +4,7 @@ import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
 import Image from 'next/image';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { getRoverStation, ROVER_STATIONS, type RoverStation } from '../data/roverStations';
+import { getRoverRoute, getRoverStation, type RoverStation } from '../data/roverStations';
 import { useMarsStore } from '../stores/marsStore';
 
 function SurfaceLookController() {
@@ -80,6 +80,19 @@ export function SurfacePanorama() {
   const activeStationId = useMarsStore((state) => state.activeStationId);
   const visitStation = useMarsStore((state) => state.visitStation);
   const station = getRoverStation(activeStationId);
+  const route = getRoverRoute(station.rover);
+  const routeIndex = route.stations.findIndex((item) => item.id === station.id);
+  const previousStation = route.stations[routeIndex - 1];
+  const nextStation = route.stations[routeIndex + 1];
+
+  useEffect(() => {
+    const followRoute = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft' && previousStation) visitStation(previousStation.id);
+      if (event.key === 'ArrowRight' && nextStation) visitStation(nextStation.id);
+    };
+    window.addEventListener('keydown', followRoute);
+    return () => window.removeEventListener('keydown', followRoute);
+  }, [nextStation, previousStation, visitStation]);
   const sceneDescription = station.viewType === 'none'
     ? station.note
     : `${station.region} · ${station.viewType === 'panorama' ? '360° panorama' : 'archival camera frame'} from ${station.instrument.toLowerCase()}${station.imageCount ? ` · ${station.imageCount} source image${station.imageCount === 1 ? '' : 's'}` : ''}.`;
@@ -118,13 +131,19 @@ export function SurfacePanorama() {
         <div><span>{station.credit}</span><span>{station.date}</span></div>
         <a href={station.sourceUrl} target="_blank" rel="noreferrer">{station.sourceLabel} SOURCE ↗</a>
       </aside>
-      <nav className="surface-stations" aria-label="Rover panorama stations">
-        {ROVER_STATIONS.map((item, index) => (
+      <nav className="surface-stations" aria-label={`${station.rover} camera route`}>
+        <p><span>ROVER ROUTE</span><b>{routeIndex + 1} / {route.stations.length}</b></p>
+        {route.stations.map((item, index) => (
           <button key={item.id} className={item.id === station.id ? 'active' : ''} onClick={() => visitStation(item.id)}>
             <span>{String(index + 1).padStart(2, '0')}</span><b>{item.rover}</b><small>{item.name}</small>
           </button>
         ))}
       </nav>
+      <div className="route-controls" aria-label="Follow rover camera route">
+        <button disabled={!previousStation} onClick={() => previousStation && visitStation(previousStation.id)} aria-label="Previous camera stop">←</button>
+        <div><span>{station.rover.toUpperCase()} CAMERA ROUTE</span><b>{routeIndex + 1} OF {route.stations.length}</b><small>{route.stations.length > 1 ? 'USE ARROWS OR ← → KEYS' : 'ONLY ONE VERIFIED CAMERA STOP'}</small></div>
+        <button disabled={!nextStation} onClick={() => nextStation && visitStation(nextStation.id)} aria-label="Next camera stop">→</button>
+      </div>
       {station.viewType === 'panorama' && <div className="surface-crosshair"><span /><i /></div>}
       <div className="surface-hint">{station.viewType === 'panorama' ? 'DRAG TO LOOK AROUND · SCROLL TO ZOOM' : 'AUTHENTIC MISSION ARCHIVE'}</div>
     </section>
