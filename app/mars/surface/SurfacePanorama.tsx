@@ -9,11 +9,18 @@ import { useMarsStore } from '../stores/marsStore';
 
 type ViewCommand = { action: 'zoom-in' | 'zoom-out' | 'reset'; key: number };
 
-function SurfaceLookController({ command }: { command: ViewCommand }) {
+function SurfaceLookController({ command, station }: { command: ViewCommand; station: RoverStation }) {
   const { gl } = useThree();
-  const yaw = useRef(-1.2);
-  const pitch = useRef(-0.03);
-  const fov = useRef(45);
+  const view = station.panoramaView ?? {
+    initialYaw: -1.2,
+    initialPitch: -0.03,
+    initialFov: 45,
+    minPitch: -0.72,
+    maxPitch: 0.62,
+  };
+  const yaw = useRef(view.initialYaw);
+  const pitch = useRef(view.initialPitch);
+  const fov = useRef(view.initialFov);
 
   const changeFov = useCallback((amount: number) => {
     fov.current = THREE.MathUtils.clamp(fov.current + amount, 26, 68);
@@ -24,11 +31,11 @@ function SurfaceLookController({ command }: { command: ViewCommand }) {
     if (command.action === 'zoom-in') changeFov(-8);
     if (command.action === 'zoom-out') changeFov(8);
     if (command.action === 'reset') {
-      yaw.current = -1.2;
-      pitch.current = -0.03;
-      fov.current = 45;
+      yaw.current = view.initialYaw;
+      pitch.current = view.initialPitch;
+      fov.current = view.initialFov;
     }
-  }, [changeFov, command]);
+  }, [changeFov, command, view.initialFov, view.initialPitch, view.initialYaw]);
 
   useEffect(() => {
     const element = gl.domElement;
@@ -56,7 +63,11 @@ function SurfaceLookController({ command }: { command: ViewCommand }) {
       }
       if (!dragging) return;
       yaw.current -= (event.clientX - previousX) * 0.0032;
-      pitch.current = THREE.MathUtils.clamp(pitch.current - (event.clientY - previousY) * 0.0024, -0.72, 0.62);
+      pitch.current = THREE.MathUtils.clamp(
+        pitch.current - (event.clientY - previousY) * 0.0024,
+        view.minPitch,
+        view.maxPitch,
+      );
       previousX = event.clientX;
       previousY = event.clientY;
     };
@@ -82,7 +93,7 @@ function SurfaceLookController({ command }: { command: ViewCommand }) {
       element.removeEventListener('pointercancel', up);
       element.removeEventListener('wheel', wheel);
     };
-  }, [changeFov, gl]);
+  }, [changeFov, gl, view.maxPitch, view.minPitch]);
 
   useFrame(({ camera: activeCamera }) => {
     activeCamera.rotation.order = 'YXZ';
@@ -106,60 +117,33 @@ function RoverPanorama({ station, onReady }: { station: RoverStation; onReady: (
     panoramaTexture.wrapS = THREE.RepeatWrapping;
     panoramaTexture.repeat.x = -1;
     panoramaTexture.offset.x = 1;
+    if (station.panoramaView) {
+      const { cropTop, cropBottom } = station.panoramaView;
+      panoramaTexture.repeat.y = 1 - cropTop - cropBottom;
+      panoramaTexture.offset.y = cropBottom;
+    }
     panoramaTexture.anisotropy = Math.min(8, maxAnisotropy);
     panoramaTexture.minFilter = THREE.LinearMipmapLinearFilter;
     panoramaTexture.magFilter = THREE.LinearFilter;
     panoramaTexture.needsUpdate = true;
     return panoramaTexture;
-  }, [loadedTexture, maxAnisotropy]);
+  }, [loadedTexture, maxAnisotropy, station.panoramaView]);
   useEffect(() => () => texture.dispose(), [texture]);
   useEffect(() => {
     const frame = requestAnimationFrame(onReady);
     return () => cancelAnimationFrame(frame);
   }, [onReady, texture]);
-  const cylinderHeight = (Math.PI * 20) / station.imageAspect;
+  const usableHeight = station.panoramaView
+    ? 1 - station.panoramaView.cropTop - station.panoramaView.cropBottom
+    : 1;
+  const usableAspect = station.imageAspect / usableHeight;
+  const cylinderHeight = (Math.PI * 20) / usableAspect;
+  const horizon = station.panoramaView?.horizon ?? 0.5;
+  const verticalOffset = -((1 - horizon) - 0.5) * cylinderHeight;
   return (
-    <mesh rotation={[0, Math.PI / 2, 0]}>
+    <mesh position={[0, verticalOffset, 0]} rotation={[0, Math.PI / 2, 0]}>
       <cylinderGeometry args={[10, 10, cylinderHeight, 160, 1, true]} />
       <meshBasicMaterial map={texture} side={THREE.BackSide} toneMapped={false} />
-    </mesh>
-  );
-}
-
-const SKY_VERTEX_SHADER = `
-  varying float vHeight;
-  void main() {
-    vHeight = normalize(position).y;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const SKY_FRAGMENT_SHADER = `
-  varying float vHeight;
-  void main() {
-    vec3 zenith = vec3(0.24, 0.105, 0.055);
-    vec3 upperSky = vec3(0.48, 0.245, 0.13);
-    vec3 horizon = vec3(0.72, 0.42, 0.25);
-    vec3 ground = vec3(0.16, 0.065, 0.03);
-    float upperBlend = smoothstep(0.02, 0.78, vHeight);
-    vec3 sky = mix(horizon, upperSky, upperBlend);
-    sky = mix(sky, zenith, smoothstep(0.68, 1.0, vHeight));
-    vec3 color = mix(ground, sky, smoothstep(-0.28, 0.02, vHeight));
-    gl_FragColor = vec4(color, 1.0);
-  }
-`;
-
-function SurfaceSky() {
-  return (
-    <mesh>
-      <sphereGeometry args={[11.5, 96, 48]} />
-      <shaderMaterial
-        vertexShader={SKY_VERTEX_SHADER}
-        fragmentShader={SKY_FRAGMENT_SHADER}
-        side={THREE.BackSide}
-        depthWrite={false}
-        toneMapped={false}
-      />
     </mesh>
   );
 }
@@ -221,9 +205,8 @@ export function SurfacePanorama() {
       {station.viewType === 'panorama' && (
         <Canvas camera={{ position: [0, 0, 0.001], fov: 45, near: 0.01, far: 30 }} gl={{ antialias: true }} dpr={[1, 2]}>
           <color attach="background" args={['#7a4129']} />
-          <SurfaceSky />
           <Suspense fallback={null}><RoverPanorama station={station} onReady={markMediaReady} /></Suspense>
-          <SurfaceLookController command={viewCommand} />
+          <SurfaceLookController key={station.id} command={viewCommand} station={station} />
         </Canvas>
       )}
       {station.viewType === 'photo' && displayImage && (

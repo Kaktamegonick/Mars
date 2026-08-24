@@ -28,6 +28,16 @@ export type RoverStation = {
   enhancedImage?: string;
   imageCount: number | null;
   imageAspect: number;
+  panoramaView?: {
+    cropTop: number;
+    cropBottom: number;
+    horizon: number;
+    initialYaw: number;
+    initialPitch: number;
+    initialFov: number;
+    minPitch: number;
+    maxPitch: number;
+  };
   nativeWidth?: number;
   nativeHeight?: number;
   viewType: 'panorama' | 'photo' | 'none';
@@ -64,6 +74,7 @@ export const ROVER_STATIONS: RoverStation[] = [
     name: 'Columbia Memorial Station', region: 'Gusev Crater · landing site', sol: 'EARLY MISSION', date: 'JAN 2004',
     latitude: -14.5684, longitude: 175.4726, image: '/mars-data/spirit-landing-360.jpg', imageCount: null,
     imageAspect: 11220 / 1385, viewType: 'panorama', instrument: 'PANORAMIC CAMERA', colorMode: 'COLOR',
+    panoramaView: { cropTop: 0, cropBottom: 0.11, horizon: 0.2, initialYaw: 1.57, initialPitch: -0.13, initialFov: 30, minPitch: -0.15, maxPitch: 0.03 },
     status: 'SUCCESS', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/photojournal/mars-in-full-view/',
     credit: 'NASA / JPL / CORNELL',
   },
@@ -80,6 +91,7 @@ export const ROVER_STATIONS: RoverStation[] = [
     name: 'Bradbury Landing', region: 'Gale Crater · landing site', sol: 'SOL 2', date: '08 AUG 2012',
     latitude: -4.5895, longitude: 137.4417, image: '/mars-data/curiosity-landing-360.jpg', imageCount: null,
     imageAspect: 7719 / 983, viewType: 'panorama', instrument: 'NAVIGATION CAMERAS', colorMode: 'COLOR',
+    panoramaView: { cropTop: 0.1, cropBottom: 0.09, horizon: 0.2, initialYaw: 0, initialPitch: -0.13, initialFov: 30, minPitch: -0.15, maxPitch: 0.03 },
     status: 'ACTIVE', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/photojournal/curiosity-takes-it-all-in/',
     credit: 'NASA / JPL-CALTECH',
   },
@@ -88,6 +100,7 @@ export const ROVER_STATIONS: RoverStation[] = [
     name: 'Octavia E. Butler Landing', region: 'Jezero Crater floor', sol: 'SOL 3', date: '21 FEB 2021',
     latitude: 18.444543, longitude: 77.450947, image: '/mars-data/perseverance-landing-sol3.jpg', imageCount: 142,
     imageAspect: 6000 / 1589, viewType: 'panorama', instrument: 'MASTCAM-Z', colorMode: 'NATURAL COLOR',
+    panoramaView: { cropTop: 0.025, cropBottom: 0.065, horizon: 0.17, initialYaw: -2.83, initialPitch: -0.04, initialFov: 32, minPitch: -0.08, maxPitch: 0.04 },
     status: 'ACTIVE', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/photojournal/mastcam-zs-first-360-degree-panorama/',
     credit: 'NASA / JPL-CALTECH / MSSS / ASU',
   },
@@ -96,6 +109,7 @@ export const ROVER_STATIONS: RoverStation[] = [
     name: 'Tianwen-1 Landing Site', region: 'Southern Utopia Planitia', sol: 'PRE-DEPLOYMENT', date: 'MAY 2021',
     latitude: 25.066, longitude: 109.925, image: '/mars-data/zhurong-landing-360.jpg', imageCount: null,
     imageAspect: 6000 / 2045, viewType: 'panorama', instrument: 'NAVIGATION & TERRAIN CAMERA', colorMode: 'COLOR',
+    panoramaView: { cropTop: 0.14, cropBottom: 0.11, horizon: 0.33, initialYaw: 0.63, initialPitch: 0, initialFov: 32, minPitch: -0.08, maxPitch: 0.08 },
     status: 'SUCCESS', sourceLabel: 'CNSA', sourceUrl: 'https://www.cnsa.gov.cn/n6758824/n6759009/n6760412/n6760413/c6840380/content.html',
     credit: 'CHINA NATIONAL SPACE ADMINISTRATION',
   },
@@ -104,6 +118,7 @@ export const ROVER_STATIONS: RoverStation[] = [
     name: 'Belva Crater', region: 'Echo Creek · west rim', sol: 'SOL 772', date: '22 APR 2023',
     latitude: 18.482929, longitude: 77.369008, image: '/mars-data/perseverance-belva-sol772.jpg', imageCount: 152,
     imageAspect: 6000 / 792, viewType: 'panorama', instrument: 'MASTCAM-Z', colorMode: 'NATURAL COLOR',
+    panoramaView: { cropTop: 0, cropBottom: 0.18, horizon: 0.25, initialYaw: 1.57, initialPitch: -0.1, initialFov: 30, minPitch: -0.12, maxPitch: 0.03 },
     status: 'ACTIVE', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/photojournal/perseverance-takes-in-view-at-belva-crater/',
     credit: 'NASA / JPL-CALTECH / ASU / MSSS',
   },
@@ -112,6 +127,7 @@ export const ROVER_STATIONS: RoverStation[] = [
     name: 'Airey Hill', region: 'Jezero Crater · Margin Unit', sol: 'SOLS 962–965', date: '03–06 NOV 2023',
     latitude: 18.49651, longitude: 77.352337, image: '/mars-data/perseverance-airey-hill.jpg', imageCount: 993,
     imageAspect: 6000 / 1617, viewType: 'panorama', instrument: 'MASTCAM-Z', colorMode: 'NATURAL COLOR',
+    panoramaView: { cropTop: 0, cropBottom: 0.09, horizon: 0.18, initialYaw: 2.4, initialPitch: -0.02, initialFov: 32, minPitch: -0.08, maxPitch: 0.04 },
     status: 'ACTIVE', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/photojournal/perseverances-360-degree-view-from-airey-hill/',
     credit: 'NASA / JPL-CALTECH / ASU / MSSS',
   },

@@ -90,9 +90,11 @@ resolution. NASA notes that the grain is inherent to the rover camera's roughly
 stretching it to the full screen and labels the original size.
 
 Panoramic assets are projected onto a cylindrical camera surface using their
-exact source aspect ratio. The cylinder height is derived directly from its
-circumference and the image dimensions; no minimum or maximum height stretching
-is applied.
+exact usable source aspect ratio. Mission-specific crop values remove only
+non-photographic archive borders such as black stitch margins, labels, and
+rulers; rover-camera pixels are not regenerated or stretched. Vertical movement
+is limited to the real photographed field of view instead of inventing a
+synthetic zenith or ground.
 
 ## MRO reference orbit
 
