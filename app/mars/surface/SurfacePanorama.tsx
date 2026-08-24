@@ -3,6 +3,7 @@
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { getRoverStation, ROVER_STATIONS, type RoverStation } from '../data/roverStations';
 import { useMarsStore } from '../stores/marsStore';
 
 function SurfaceLookController() {
@@ -52,15 +53,16 @@ function SurfaceLookController() {
   return null;
 }
 
-function RoverPanorama() {
-  const texture = useLoader(THREE.TextureLoader, '/mars-data/perseverance-airey-hill.jpg');
+function RoverPanorama({ station }: { station: RoverStation }) {
+  const texture = useLoader(THREE.TextureLoader, station.image);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = THREE.RepeatWrapping;
   texture.repeat.x = -1;
   texture.offset.x = 1;
+  const cylinderHeight = THREE.MathUtils.clamp((Math.PI * 20) / station.imageAspect, 12, 18);
   return (
     <mesh rotation={[0, Math.PI / 2, 0]}>
-      <cylinderGeometry args={[10, 10, 22.6, 160, 1, true]} />
+      <cylinderGeometry args={[10, 10, cylinderHeight, 160, 1, true]} />
       <meshBasicMaterial map={texture} side={THREE.BackSide} toneMapped={false} />
     </mesh>
   );
@@ -68,23 +70,34 @@ function RoverPanorama() {
 
 export function SurfacePanorama() {
   const exitSurfaceView = useMarsStore((state) => state.exitSurfaceView);
+  const activeStationId = useMarsStore((state) => state.activeStationId);
+  const visitStation = useMarsStore((state) => state.visitStation);
+  const station = getRoverStation(activeStationId);
   return (
-    <section className="surface-view" aria-label="Perseverance rover panorama at Airey Hill">
+    <section className="surface-view" aria-label={`Perseverance rover panorama at ${station.name}`}>
       <Canvas camera={{ position: [0, 0, 0.001], fov: 55, near: 0.01, far: 30 }} gl={{ antialias: true }} dpr={[1, 1.6]}>
         <color attach="background" args={['#9c5c38']} />
-        <RoverPanorama />
+        <RoverPanorama station={station} />
         <SurfaceLookController />
       </Canvas>
       <header className="surface-topbar">
-        <div className="wordmark"><span className="mission-mark">P</span><div><b>PERSEVERANCE</b><small>MASTCAM-Z / SOL 962–965</small></div></div>
+        <div className="wordmark"><span className="mission-mark">P</span><div><b>PERSEVERANCE</b><small>MASTCAM-Z / {station.sol}</small></div></div>
         <button className="orbit-button" onClick={exitSurfaceView}>↑ RETURN TO ORBIT</button>
       </header>
       <aside className="surface-caption">
-        <p className="panel-label">LIVE SURFACE STATION</p>
-        <h2>Airey Hill</h2>
-        <p>Jezero Crater · 360° natural-color panorama assembled from 993 Mastcam-Z images.</p>
-        <div><span>NASA / JPL-CALTECH / ASU / MSSS</span><span>03–06 NOV 2023</span></div>
+        <p className="panel-label">ARCHIVE SURFACE STATION</p>
+        <h2>{station.name}</h2>
+        <p>{station.region} · 360° {station.colorMode.toLowerCase()} panorama assembled from {station.imageCount} Mastcam-Z images.</p>
+        <div><span>{station.credit}</span><span>{station.date}</span></div>
+        <a href={station.sourceUrl} target="_blank" rel="noreferrer">NASA SOURCE ↗</a>
       </aside>
+      <nav className="surface-stations" aria-label="Rover panorama stations">
+        {ROVER_STATIONS.map((item, index) => (
+          <button key={item.id} className={item.id === station.id ? 'active' : ''} onClick={() => visitStation(item.id)}>
+            <span>0{index + 1}</span>{item.name}
+          </button>
+        ))}
+      </nav>
       <div className="surface-crosshair"><span /><i /></div>
       <div className="surface-hint">DRAG TO LOOK AROUND · SCROLL TO ZOOM</div>
     </section>

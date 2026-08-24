@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as THREE from 'three';
+import { getRoverStation, stationPosition, type RoverStation } from '../data/roverStations';
 
 export type MarsPoint = {
   position: THREE.Vector3;
@@ -19,6 +20,7 @@ type Flight = {
 
 type MarsState = {
   surfaceView: boolean;
+  activeStationId: RoverStation['id'];
   hover: MarsPoint | null;
   selected: MarsPoint | null;
   cameraPoint: MarsPoint;
@@ -34,6 +36,7 @@ type MarsState = {
   clearFlight: () => void;
   enterSurfaceView: () => void;
   exitSurfaceView: () => void;
+  visitStation: (id: RoverStation['id']) => void;
 };
 
 const JEZERO = { position: new THREE.Vector3(), latitude: 18.38, longitude: 77.58, elevation: -2620 };
@@ -48,17 +51,9 @@ export const useMarsStore = create<MarsState>((set) => ({
   fps: 60,
   flight: null,
   surfaceView: false,
+  activeStationId: 'airey',
   setHover: (hover) => set({ hover }),
-  select: (selected, quick = false) => set({
-    selected,
-    flight: {
-      destination: selected.position.clone(),
-      requestedAt: performance.now(),
-      quick,
-      desiredAltitude: 3,
-      enterSurface: true,
-    },
-  }),
+  select: (selected, quick = false) => set({ selected, flight: { destination: selected.position.clone(), requestedAt: performance.now(), quick } }),
   orbitOut: () => set((state) => ({
     flight: {
       destination: state.cameraPoint.position.clone(),
@@ -71,4 +66,21 @@ export const useMarsStore = create<MarsState>((set) => ({
   clearFlight: () => set({ flight: null }),
   enterSurfaceView: () => set({ surfaceView: true, flight: null, mode: 'ROVER' }),
   exitSurfaceView: () => set({ surfaceView: false, mode: 'ORBITAL', altitude: 1_800_000 }),
+  visitStation: (id) => {
+    const station = getRoverStation(id);
+    const position = stationPosition(station);
+    const selected = { position, latitude: station.latitude, longitude: station.longitude, elevation: 0 };
+    set({
+      activeStationId: id,
+      selected,
+      surfaceView: false,
+      flight: {
+        destination: position.clone(),
+        requestedAt: performance.now(),
+        quick: false,
+        desiredAltitude: 3,
+        enterSurface: true,
+      },
+    });
+  },
 }));

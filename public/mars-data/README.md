@@ -25,3 +25,19 @@ natural-color panorama from Airey Hill in Jezero Crater. It was assembled from
 (sols 962, 963, and 965). Credit: NASA/JPL-Caltech/ASU/MSSS.
 
 - https://science.nasa.gov/photojournal/perseverances-360-degree-view-from-airey-hill/
+
+The verified rover-station layer also includes:
+
+- `perseverance-landing-sol3.jpg` — the first Mastcam-Z 360-degree panorama,
+  assembled from 142 images taken at the Octavia E. Butler landing site on sol 3.
+  https://science.nasa.gov/photojournal/mastcam-zs-first-360-degree-panorama/
+- `perseverance-belva-sol772.jpg` — the 152-image panorama captured from Echo
+  Creek on the western rim of Belva Crater on sol 772.
+  https://science.nasa.gov/photojournal/perseverance-takes-in-view-at-belva-crater/
+
+Station coordinates are tied to the published Perseverance waypoint layer. The
+Belva station uses the sol 770 waypoint occupied through sol 774; the Airey Hill
+station uses the final published waypoint reached on sol 960 and occupied while
+the panorama sequence began on sol 962.
+
+- https://services.arcgis.com/lqRTrQp2HrfnJt8U/ArcGIS/rest/services/Perseverance_Waypoints/FeatureServer/0
