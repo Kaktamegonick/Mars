@@ -1,0 +1,44 @@
+@import 'tailwindcss';
+
+:root { --ember:#e86131; --ink:#080503; --cream:#f1e8dc; }
+* { box-sizing:border-box; }
+html, body { margin:0; min-height:100%; background:var(--ink); color:var(--cream); }
+body { overflow:hidden; font-family:var(--font-geist-mono), ui-monospace, monospace; }
+.explorer-shell { position:fixed; inset:0; background:#050301; overflow:hidden; }
+.explorer-shell canvas { position:absolute!important; inset:0; cursor:grab; }
+.explorer-shell canvas:active { cursor:grabbing; }
+.explorer-shell::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(90deg,rgba(5,3,1,.5),transparent 42%),radial-gradient(circle at 50% 50%,transparent 45%,rgba(0,0,0,.28)); }
+.topbar { position:absolute; z-index:3; top:0; left:0; right:0; display:flex; align-items:center; justify-content:space-between; padding:28px 34px; border-bottom:1px solid rgba(241,232,220,.16); }
+.wordmark { display:flex; align-items:center; gap:13px; }
+.mission-mark { width:36px; height:36px; display:grid; place-items:center; border:1px solid var(--ember); color:var(--ember); font-weight:700; font-family:var(--font-geist-sans); }
+.wordmark b { display:block; font:700 14px/1 var(--font-geist-sans); letter-spacing:.26em; }
+.wordmark small { display:block; margin-top:6px; font-size:8px; letter-spacing:.16em; color:rgba(241,232,220,.48); }
+.live-pill { padding:8px 12px; border:1px solid rgba(241,232,220,.18); font-size:8px; letter-spacing:.18em; }
+.top-actions { display:flex; align-items:center; gap:10px; }
+.orbit-button { border:1px solid rgba(232,97,49,.46); background:rgba(8,5,3,.42); color:var(--ember); padding:8px 12px; font-size:8px; letter-spacing:.18em; cursor:pointer; transition:background .2s,color .2s; }
+.orbit-button:hover { background:var(--ember); color:#130904; }
+.live-pill i { display:inline-block; width:5px; height:5px; margin-right:8px; border-radius:50%; background:#78e58d; box-shadow:0 0 8px #78e58d; }
+.hero-copy { position:absolute; z-index:2; left:5vw; top:50%; transform:translateY(-48%); max-width:420px; pointer-events:none; }
+.hero-copy p, .panel-label { color:var(--ember); letter-spacing:.22em; font-size:9px; }
+.hero-copy h1 { margin:18px 0 22px; font:300 clamp(44px,6.4vw,92px)/.88 var(--font-geist-sans); letter-spacing:-.065em; text-wrap:balance; }
+.hero-copy span { font:400 10px/1.6 var(--font-geist-mono); letter-spacing:.04em; color:rgba(241,232,220,.55); }
+.telemetry { position:absolute; z-index:3; right:34px; top:50%; width:230px; transform:translateY(-38%); padding:18px 20px; border:1px solid rgba(241,232,220,.16); background:rgba(9,5,3,.52); backdrop-filter:blur(12px); pointer-events:none; }
+.telemetry dl { margin:20px 0; }
+.telemetry dl div { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(241,232,220,.08); }
+.telemetry dt { font-size:8px; color:rgba(241,232,220,.44); }
+.telemetry dd { margin:0; font-size:10px; }
+.data-source { display:flex; justify-content:space-between; padding-top:8px; color:var(--ember); font-size:8px; letter-spacing:.1em; }
+.target-readout { position:absolute; z-index:4; left:34px; bottom:58px; width:210px; padding:15px 17px; border-left:1px solid var(--ember); background:linear-gradient(90deg,rgba(8,4,2,.8),transparent); pointer-events:none; }
+.target-readout dl { margin:10px 0 0; }
+.target-readout dl div { display:flex; justify-content:space-between; padding:3px 0; }
+.target-readout dt { font-size:7px; color:rgba(241,232,220,.42); }
+.target-readout dd { margin:0; font-size:8px; }
+.flight-status { position:absolute; z-index:4; left:50%; top:104px; transform:translate(-50%,-10px); padding:8px 13px; border:1px solid rgba(232,97,49,.35); background:rgba(7,4,2,.72); color:var(--ember); font-size:8px; letter-spacing:.16em; opacity:0; transition:opacity .25s,transform .25s; pointer-events:none; }
+.flight-status.visible { opacity:1; transform:translate(-50%,0); }
+.flight-status span { display:inline-block; width:34px; height:1px; margin:0 9px 2px 0; background:var(--ember); animation:flight-pulse 1s ease-in-out infinite; }
+@keyframes flight-pulse { 50% { width:8px; opacity:.35; } }
+.scale { position:absolute; z-index:3; left:50%; bottom:44px; transform:translateX(-50%); font-size:8px; color:rgba(241,232,220,.45); text-align:center; pointer-events:none; }
+.scale span { display:block; width:100px; height:5px; margin:0 auto 7px; border-left:1px solid var(--cream); border-right:1px solid var(--cream); border-top:1px solid var(--cream); }
+.statusbar { position:absolute; z-index:3; left:0; right:0; bottom:0; display:flex; gap:32px; padding:11px 34px; border-top:1px solid rgba(241,232,220,.14); font-size:7px; letter-spacing:.15em; color:rgba(241,232,220,.42); pointer-events:none; }
+.statusbar span:last-child { margin-left:auto; }
+@media (max-width:760px) { .telemetry{right:16px;top:auto;bottom:58px;width:190px;transform:none}.telemetry dl div:nth-child(-n+2){display:none}.hero-copy{left:20px;top:24%;transform:none}.hero-copy h1{font-size:48px}.topbar{padding:18px 20px}.live-pill{display:none}.statusbar{padding:11px 18px}.statusbar span:nth-child(2){display:none}.target-readout{left:16px;bottom:58px;width:160px}.scale{display:none} }
