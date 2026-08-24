@@ -35,9 +35,17 @@ function StationMarker({ station, active, onVisit }: { station: RoverStation; ac
         <ringGeometry args={[0.056, 0.06, 48]} />
         <meshBasicMaterial color={hasSurfaceImage ? '#e86131' : '#81766e'} transparent opacity={active ? 0.6 : 0.16} side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[0, 0, 0.004]}>
-        <circleGeometry args={[0.009, 24]} />
-        <meshBasicMaterial color={hasSurfaceImage ? '#e86131' : '#81766e'} />
+      <mesh position={[0, 0, 0.038]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.0024, 0.0032, 0.074, 8]} />
+        <meshBasicMaterial color={active ? '#fff4e8' : '#c9bdb0'} />
+      </mesh>
+      <mesh position={[0.019, 0, 0.066]}>
+        <planeGeometry args={[0.038, 0.023]} />
+        <meshBasicMaterial color={hasSurfaceImage ? active ? '#ff7845' : '#e86131' : '#81766e'} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 0, 0.076]}>
+        <sphereGeometry args={[0.0042, 12, 8]} />
+        <meshBasicMaterial color="#f1e8dc" />
       </mesh>
     </group>
   );

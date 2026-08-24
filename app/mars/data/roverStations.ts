@@ -89,6 +89,14 @@ export const ROVER_STATIONS: RoverStation[] = [
     credit: 'NASA / JPL-CALTECH / MSSS / ASU',
   },
   {
+    id: 'zhurong', rover: 'Zhurong', mission: 'Tianwen-1', operator: 'CHINA / CNSA', year: '2021',
+    name: 'Tianwen-1 Landing Site', region: 'Southern Utopia Planitia', sol: 'PRE-DEPLOYMENT', date: 'MAY 2021',
+    latitude: 25.066, longitude: 109.925, image: '/mars-data/zhurong-landing-360.jpg', imageCount: null,
+    imageAspect: 6000 / 2045, viewType: 'panorama', instrument: 'NAVIGATION & TERRAIN CAMERA', colorMode: 'COLOR',
+    status: 'SUCCESS', sourceLabel: 'CNSA', sourceUrl: 'https://www.cnsa.gov.cn/n6758824/n6759009/n6760412/n6760413/c6840380/content.html',
+    credit: 'CHINA NATIONAL SPACE ADMINISTRATION',
+  },
+  {
     id: 'belva', rover: 'Perseverance', mission: 'Mars 2020', operator: 'USA / NASA', year: '2023',
     name: 'Belva Crater', region: 'Echo Creek · west rim', sol: 'SOL 772', date: '22 APR 2023',
     latitude: 18.482929, longitude: 77.369008, image: '/mars-data/perseverance-belva-sol772.jpg', imageCount: 152,
@@ -104,18 +112,12 @@ export const ROVER_STATIONS: RoverStation[] = [
     status: 'ACTIVE', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/photojournal/perseverances-360-degree-view-from-airey-hill/',
     credit: 'NASA / JPL-CALTECH / ASU / MSSS',
   },
-  {
-    id: 'zhurong', rover: 'Zhurong', mission: 'Tianwen-1', operator: 'CHINA / CNSA', year: '2021',
-    name: 'Tianwen-1 Landing Site', region: 'Southern Utopia Planitia', sol: 'PRE-DEPLOYMENT', date: 'MAY 2021',
-    latitude: 25.066, longitude: 109.925, image: '/mars-data/zhurong-landing-360.jpg', imageCount: null,
-    imageAspect: 6000 / 2045, viewType: 'panorama', instrument: 'NAVIGATION & TERRAIN CAMERA', colorMode: 'COLOR',
-    status: 'SUCCESS', sourceLabel: 'CNSA', sourceUrl: 'https://www.cnsa.gov.cn/n6758824/n6759009/n6760412/n6760413/c6840380/content.html',
-    credit: 'CHINA NATIONAL SPACE ADMINISTRATION',
-  },
 ];
 
 export function getRoverStation(id: RoverStationId) {
-  return ROVER_STATIONS.find((station) => station.id === id) ?? ROVER_STATIONS[7];
+  return ROVER_STATIONS.find((station) => station.id === id)
+    ?? ROVER_STATIONS.find((station) => station.id === 'airey')
+    ?? ROVER_STATIONS[0];
 }
 
 export function stationPosition(station: RoverStation, radius = MARS_RADIUS + 0.035) {
