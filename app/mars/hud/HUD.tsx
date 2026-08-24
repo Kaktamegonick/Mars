@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useMarsStore } from '../stores/marsStore';
-import { ROVER_STATIONS } from '../data/roverStations';
+import { getRoverStation, ROVER_STATIONS } from '../data/roverStations';
 import { formatDistance, formatElevation, formatLatitude, formatLongitude } from '../utils/coordinates';
 
 export function HUD() {
@@ -18,6 +18,7 @@ export function HUD() {
   const orbitOut = useMarsStore((state) => state.orbitOut);
   const activeStationId = useMarsStore((state) => state.activeStationId);
   const visitStation = useMarsStore((state) => state.visitStation);
+  const activeStation = getRoverStation(activeStationId);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -32,15 +33,16 @@ export function HUD() {
       <header className="topbar">
         <div className="wordmark"><span className="mission-mark">M</span><div><b>MARS</b><small>EXPLORER / MISSION 01</small></div></div>
         <div className="top-actions">
-          <button className="surface-button" onClick={() => visitStation(activeStationId)}>↓ ACTIVE ROVER SITE</button>
+          <button className="surface-button" onClick={() => visitStation(activeStationId)}>↓ DESCEND · {activeStation.rover.toUpperCase()}</button>
           <button className="orbit-button" onClick={orbitOut} aria-label="Return to orbit">↑ ORBIT</button>
-          <div className="live-pill"><i /> LIVE TERRAIN</div>
+          <div className="live-pill locked"><i /> DESCENT LOCKED</div>
         </div>
       </header>
 
       <section className="hero-copy">
-        <p>MRO / MGS DATASET</p><h1>Touch the<br />red planet.</h1>
-        <span>Drag to orbit · scroll to descend · choose a verified rover site</span>
+        <p>ORBITAL CARTOGRAPHY / VERIFIED SURFACE ARCHIVE</p><h1>Touch the<br /><em>red planet.</em></h1>
+        <span>Orbit anywhere · surface descent only at verified rover sites</span>
+        <div className="mission-path"><b>01</b><span>EXPLORE ORBIT</span><i /><b>02</b><span>CHOOSE ROVER SITE</span></div>
       </section>
 
       <button
@@ -49,7 +51,7 @@ export function HUD() {
         aria-controls="mission-index"
         onClick={() => setCatalogOpen((open) => !open)}
       >
-        <b>MISSION INDEX</b><span>{ROVER_STATIONS.length.toString().padStart(2, '0')} VERIFIED SITES</span><i>{catalogOpen ? '×' : '+'}</i>
+        <b>CHOOSE ROVER SITE</b><span>{ROVER_STATIONS.length.toString().padStart(2, '0')} VERIFIED DESCENT POINTS</span><i>{catalogOpen ? '×' : '+'}</i>
       </button>
 
       {catalogOpen && (
@@ -89,14 +91,14 @@ export function HUD() {
 
       {hover && (
         <aside className="target-readout">
-          <p className="panel-label">TARGET</p>
+          <p className="panel-label">ORBITAL TARGET / DESCENT LOCKED</p>
           <dl><div><dt>LAT</dt><dd>{formatLatitude(hover.latitude)}</dd></div><div><dt>LON</dt><dd>{formatLongitude(hover.longitude)}</dd></div><div><dt>ELEVATION</dt><dd>{formatElevation(hover.elevation)}</dd></div><div><dt>DISTANCE</dt><dd>{formatDistance(hover.distance ?? 0)}</dd></div></dl>
         </aside>
       )}
 
-      <div className={`flight-status ${flight ? 'visible' : ''}`}><span /> {flight?.enterSurface ? 'DESCENDING TO VERIFIED ROVER SITE' : 'TRAVELLING TO TARGET'}</div>
+      <div className={`flight-status ${flight ? 'visible' : ''}`}><span /> {flight?.enterSurface ? 'DESCENDING TO VERIFIED ROVER SITE' : 'REPOSITIONING IN SAFE ORBIT'}</div>
       <div className="scale"><span /> {altitude > 1_000_000 ? '1,000 KM' : altitude > 10_000 ? '10 KM' : altitude > 100 ? '100 M' : '10 M'}</div>
-      <div className="statusbar"><span>REGION: {selected ? 'SELECTED TERRAIN' : 'JEZERO CRATER'}</span><span>MODE: {mode}</span><span>FPS: {fps}</span></div>
+      <div className="statusbar"><span>REGION: {selected ? 'SELECTED TERRAIN' : 'GLOBAL MARS'}</span><span>DESCENT: VERIFIED SITES ONLY</span><span>MODE: {mode}</span><span>FPS: {fps}</span></div>
     </>
   );
 }

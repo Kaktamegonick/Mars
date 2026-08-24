@@ -6,6 +6,8 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useMarsStore } from '../stores/marsStore';
 import { cameraMode, cartesianToMars, DISPLACEMENT_UNITS, MARS_RADIUS, METERS_PER_UNIT } from '../utils/coordinates';
 
+const ORBITAL_DESCENT_LIMIT = 320_000;
+
 type ActiveFlight = {
   key: number;
   elapsed: number;
@@ -39,10 +41,13 @@ export function MarsCameraController() {
     const endDirection = flight.destination.clone().normalize();
     const angle = startDirection.angleTo(endDirection);
     const altitude = Math.max(3, (startPosition.length() - MARS_RADIUS) * METERS_PER_UNIT);
-    let finalAltitude = altitude > 500_000 ? 120_000 : altitude > 10_000 ? altitude * 0.45 : altitude * 0.7;
-    if (flight.quick) finalAltitude = Math.max(3, Math.min(5_000, altitude * 0.06));
+    const enterSurface = flight.enterSurface ?? false;
+    let finalAltitude = altitude > 500_000 ? 320_000 : altitude;
+    if (flight.quick) finalAltitude = ORBITAL_DESCENT_LIMIT;
     if (flight.desiredAltitude !== undefined) finalAltitude = flight.desiredAltitude;
-    finalAltitude = Math.max(3, Math.min(finalAltitude, 120_000));
+    finalAltitude = enterSurface
+      ? Math.max(3, Math.min(finalAltitude, 120_000))
+      : Math.max(ORBITAL_DESCENT_LIMIT, Math.min(finalAltitude, 12_500_000));
     activeFlight.current = {
       key: flight.requestedAt,
       elapsed: 0,
@@ -54,7 +59,7 @@ export function MarsCameraController() {
       destination: flight.destination.clone(),
       rotation: new THREE.Quaternion().setFromUnitVectors(startDirection, endDirection),
       quick: flight.quick,
-      enterSurface: flight.enterSurface ?? false,
+      enterSurface,
     };
     controls.current.enabled = false;
   }, [camera, flight]);
@@ -120,7 +125,7 @@ export function MarsCameraController() {
       enableDamping
       dampingFactor={0.065}
       enablePan={false}
-      minDistance={0.000003}
+      minDistance={MARS_RADIUS + ORBITAL_DESCENT_LIMIT / METERS_PER_UNIT}
       maxDistance={18}
       zoomToCursor
       rotateSpeed={0.42}

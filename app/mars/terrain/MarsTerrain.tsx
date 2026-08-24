@@ -6,6 +6,7 @@ import { cartesianToMars, METERS_PER_UNIT } from '../utils/coordinates';
 import { TargetMarker } from '../hud/TargetMarker';
 import { createMarsGeometry } from './createMarsGeometry';
 import { RoverStations } from './RoverStations';
+import { MarsAtmosphere } from './MarsAtmosphere';
 
 export function MarsTerrain() {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -49,6 +50,7 @@ export function MarsTerrain() {
       {hover && <TargetMarker position={hover.position} />}
       {selected && <TargetMarker position={selected.position} selected />}
       <RoverStations />
+      <MarsAtmosphere />
     </group>
   );
 }
