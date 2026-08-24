@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://mars-explorer-3d.raskkolnikovv.chatgpt.site'),
   title: 'Mars Explorer — Real terrain, one planet',
   description: 'Explore Mars in 3D using NASA and USGS terrain data.',
   openGraph: {
