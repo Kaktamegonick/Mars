@@ -38,7 +38,7 @@ export function HUD() {
         <div className="top-actions">
           <button className="route-button" onClick={viewPerseveranceRoute}>↗ PERSEVERANCE PATH</button>
           <button className="surface-button" onClick={() => visitStation(activeStationId)}>↓ DESCEND · {activeStation.rover.toUpperCase()}</button>
-          <button className="orbit-button" onClick={orbitOut} aria-label="Return to orbit">↑ ORBIT</button>
+          <button className="orbit-button" onClick={orbitOut} aria-label="Center the full globe">◎ CENTER GLOBE</button>
           <div className="live-pill locked"><i /> VERIFIED SITES ONLY</div>
         </div>
       </header>
@@ -128,6 +128,7 @@ export function HUD() {
         </div>
       )}
       <div className="scale"><span /> {altitude > 1_000_000 ? '1,000 KM' : altitude > 10_000 ? '10 KM' : altitude > 100 ? '100 M' : '10 M'}</div>
+      <div className="orbit-controls-hint">DRAG TO ROTATE · SCROLL / PINCH TO ZOOM · CENTER GLOBE TO RESET</div>
       <div className="statusbar"><span>REGION: {routeOverview ? 'JEZERO DRIVE CORRIDOR' : selected ? 'SELECTED TERRAIN' : 'GLOBAL MARS'}</span><span>DESCENT: VERIFIED SITES ONLY</span><span>MODE: {routeOverview ? 'ROUTE OVERVIEW' : mode}</span><span>FPS: {fps}</span></div>
     </>
   );

@@ -8,6 +8,8 @@ import { cameraMode, cartesianToMars, DISPLACEMENT_UNITS, MARS_RADIUS, METERS_PE
 
 const ORBITAL_DESCENT_LIMIT = 320_000;
 const MINIMUM_ORBIT_RADIUS = MARS_RADIUS + ORBITAL_DESCENT_LIMIT / METERS_PER_UNIT;
+const PLANET_CENTER = new THREE.Vector3();
+const RECENTER_ALTITUDE = 900_000;
 
 type ActiveFlight = {
   key: number;
@@ -18,6 +20,7 @@ type ActiveFlight = {
   endDirection: THREE.Vector3;
   endRadius: number;
   destination: THREE.Vector3;
+  focusTarget: THREE.Vector3;
   rotation: THREE.Quaternion;
   quick: boolean;
   enterSurface: boolean;
@@ -62,6 +65,7 @@ export function MarsCameraController() {
       endDirection,
       endRadius: flight.destination.length() + finalAltitude / METERS_PER_UNIT,
       destination: flight.destination.clone(),
+      focusTarget: flight.focusTarget?.clone() ?? flight.destination.clone(),
       rotation: new THREE.Quaternion().setFromUnitVectors(startDirection, endDirection),
       quick: flight.quick,
       enterSurface,
@@ -84,7 +88,7 @@ export function MarsCameraController() {
       const baseRadius = THREE.MathUtils.lerp(currentFlight.startPosition.length(), currentFlight.endRadius, eased);
       const arc = Math.sin(Math.PI * eased) * Math.min(1.25, 0.18 + currentFlight.startPosition.clone().normalize().angleTo(currentFlight.endDirection) * 0.42);
       camera.position.copy(direction.multiplyScalar(baseRadius + arc));
-      control.target.copy(currentFlight.startTarget).lerp(currentFlight.destination, eased);
+      control.target.copy(currentFlight.startTarget).lerp(currentFlight.focusTarget, eased);
       camera.lookAt(control.target);
       if (raw >= 1) {
         const shouldEnterSurface = currentFlight.enterSurface;
@@ -97,6 +101,12 @@ export function MarsCameraController() {
 
     if (!surfaceDescentInProgress && !routeOverview && !currentFlight && camera.position.length() < MINIMUM_ORBIT_RADIUS) {
       camera.position.normalize().multiplyScalar(MINIMUM_ORBIT_RADIUS);
+    }
+
+    const radialAltitude = (camera.position.length() - MARS_RADIUS) * METERS_PER_UNIT;
+    if (!routeOverview && !currentFlight && radialAltitude > RECENTER_ALTITUDE) {
+      const recenter = 1 - Math.exp(-delta * 3.6);
+      control.target.lerp(PLANET_CENTER, recenter);
     }
 
     const inward = camera.position.clone().negate().normalize();
@@ -134,13 +144,13 @@ export function MarsCameraController() {
       ref={controls}
       makeDefault
       enableDamping
-      dampingFactor={0.065}
+      dampingFactor={0.1}
       enablePan={false}
       minDistance={(routeOverview ? 12_000 : ORBITAL_DESCENT_LIMIT) / METERS_PER_UNIT}
       maxDistance={18}
-      zoomToCursor
-      rotateSpeed={0.42}
-      zoomSpeed={0.72}
+      zoomToCursor={false}
+      rotateSpeed={0.68}
+      zoomSpeed={1.05}
     />
   );
 }

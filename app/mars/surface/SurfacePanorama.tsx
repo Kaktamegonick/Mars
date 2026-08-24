@@ -13,10 +13,10 @@ function SurfaceLookController({ command }: { command: ViewCommand }) {
   const { gl } = useThree();
   const yaw = useRef(-1.2);
   const pitch = useRef(-0.03);
-  const fov = useRef(55);
+  const fov = useRef(45);
 
   const changeFov = useCallback((amount: number) => {
-    fov.current = THREE.MathUtils.clamp(fov.current + amount, 28, 72);
+    fov.current = THREE.MathUtils.clamp(fov.current + amount, 26, 68);
   }, []);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ function SurfaceLookController({ command }: { command: ViewCommand }) {
     if (command.action === 'reset') {
       yaw.current = -1.2;
       pitch.current = -0.03;
-      fov.current = 55;
+      fov.current = 45;
     }
   }, [changeFov, command]);
 
@@ -117,7 +117,7 @@ function RoverPanorama({ station, onReady }: { station: RoverStation; onReady: (
     const frame = requestAnimationFrame(onReady);
     return () => cancelAnimationFrame(frame);
   }, [onReady, texture]);
-  const cylinderHeight = THREE.MathUtils.clamp((Math.PI * 20) / station.imageAspect, 12, 18);
+  const cylinderHeight = (Math.PI * 20) / station.imageAspect;
   return (
     <mesh rotation={[0, Math.PI / 2, 0]}>
       <cylinderGeometry args={[10, 10, cylinderHeight, 160, 1, true]} />
@@ -177,6 +177,7 @@ export function SurfacePanorama() {
   const [uiHidden, setUiHidden] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [viewCommand, setViewCommand] = useState<ViewCommand>({ action: 'reset', key: 0 });
+  const [showEnhanced, setShowEnhanced] = useState(Boolean(station.enhancedImage));
   const markMediaReady = useCallback(() => setMediaReady(true), []);
   const sendViewCommand = useCallback((action: ViewCommand['action']) => {
     setViewCommand((current) => ({ action, key: current.key + 1 }));
@@ -212,29 +213,39 @@ export function SurfacePanorama() {
   const sceneDescription = station.viewType === 'none'
     ? station.note
     : `${station.region} · ${station.viewType === 'panorama' ? '360° panorama' : 'archival camera frame'} from ${station.instrument.toLowerCase()}${station.imageCount ? ` · ${station.imageCount} source image${station.imageCount === 1 ? '' : 's'}` : ''}.`;
+  const displayImage = showEnhanced && station.enhancedImage ? station.enhancedImage : station.image;
+  const displayWidth = showEnhanced && station.nativeWidth ? station.nativeWidth * 4 : station.nativeWidth ?? 1600;
+  const displayHeight = showEnhanced && station.nativeHeight ? station.nativeHeight * 4 : station.nativeHeight ?? Math.round(1600 / station.imageAspect);
   return (
     <section className={`surface-view${uiHidden ? ' ui-hidden' : ''}`} aria-label={`${station.rover} archive at ${station.name}`}>
       {station.viewType === 'panorama' && (
-        <Canvas camera={{ position: [0, 0, 0.001], fov: 55, near: 0.01, far: 30 }} gl={{ antialias: true }} dpr={[1, 2]}>
+        <Canvas camera={{ position: [0, 0, 0.001], fov: 45, near: 0.01, far: 30 }} gl={{ antialias: true }} dpr={[1, 2]}>
           <color attach="background" args={['#7a4129']} />
           <SurfaceSky />
           <Suspense fallback={null}><RoverPanorama station={station} onReady={markMediaReady} /></Suspense>
           <SurfaceLookController command={viewCommand} />
         </Canvas>
       )}
-      {station.viewType === 'photo' && station.image && (
-        <div className={`archive-photo${station.nativeWidth ? ' source-limited' : ''}`}>
-          <div style={{ backgroundImage: `url(${station.image})` }} />
+      {station.viewType === 'photo' && displayImage && (
+        <div className={`archive-photo${station.nativeWidth ? ' source-limited' : ''}${showEnhanced ? ' enhanced' : ''}`}>
+          <div style={{ backgroundImage: `url(${displayImage})` }} />
           <Image
-            src={station.image}
+            src={displayImage}
             alt={`${station.rover} camera view at ${station.name}`}
-            width={station.nativeWidth ?? 1600}
-            height={station.nativeHeight ?? Math.round(1600 / station.imageAspect)}
+            width={displayWidth}
+            height={displayHeight}
             unoptimized
             onLoad={markMediaReady}
           />
           {station.nativeWidth && station.nativeHeight && (
-            <span className="archive-resolution">ORIGINAL CAMERA RESOLUTION · {station.nativeWidth} × {station.nativeHeight}</span>
+            <span className="archive-resolution">{showEnhanced ? '4× NON-GENERATIVE UPSCALE' : 'ORIGINAL CAMERA RESOLUTION'} · {station.nativeWidth} × {station.nativeHeight}</span>
+          )}
+          {station.enhancedImage && (
+            <div className="archive-quality-toggle" aria-label="Image quality">
+              <span>VIEW</span>
+              <button className={!showEnhanced ? 'active' : ''} onClick={() => setShowEnhanced(false)}>ORIGINAL</button>
+              <button className={showEnhanced ? 'active' : ''} onClick={() => setShowEnhanced(true)}>4× CLEAN</button>
+            </div>
           )}
         </div>
       )}

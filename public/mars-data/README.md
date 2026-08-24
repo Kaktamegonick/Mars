@@ -58,6 +58,10 @@ and rover that captured it:
 - `sojourner-sol25.jpg` — Sojourner forward rover camera, sol 25, looking
   west toward the Mars Pathfinder lander.
   https://science.nasa.gov/photojournal/looking-westward-at-the-lander/
+- `sojourner-sol25-upscaled.jpg` — an optional deterministic 4× Lanczos upscale
+  of the same frame with mild sharpening. It introduces no generated scene
+  content, remains labeled as enhanced in the interface, and can be compared
+  with the untouched original at any time.
 - `spirit-landing-360.jpg` — NASA Photojournal PIA05049, Spirit's first full
   360-degree Panoramic Camera view at the Gusev Crater landing site. The app
   uses the 11,220-pixel-wide official asset rather than the earlier compressed
@@ -84,6 +88,11 @@ Sojourner's sol 25 frame remains at its authentic 588 × 141-pixel camera
 resolution. NASA notes that the grain is inherent to the rover camera's roughly
 3-milliradian-per-pixel angular resolution; the interface therefore avoids
 stretching it to the full screen and labels the original size.
+
+Panoramic assets are projected onto a cylindrical camera surface using their
+exact source aspect ratio. The cylinder height is derived directly from its
+circumference and the image dimensions; no minimum or maximum height stretching
+is applied.
 
 ## MRO reference orbit
 

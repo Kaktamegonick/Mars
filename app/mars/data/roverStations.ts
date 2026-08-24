@@ -25,6 +25,7 @@ export type RoverStation = {
   latitude: number;
   longitude: number;
   image: string | null;
+  enhancedImage?: string;
   imageCount: number | null;
   imageAspect: number;
   nativeWidth?: number;
@@ -53,7 +54,7 @@ export const ROVER_STATIONS: RoverStation[] = [
   {
     id: 'sojourner', rover: 'Sojourner', mission: 'Mars Pathfinder', operator: 'USA / NASA', year: '1997',
     name: 'Sagan Memorial Station', region: 'Ares Vallis · landing site', sol: 'SOL 25', date: '29 JUL 1997',
-    latitude: 19.13, longitude: -33.22, image: '/mars-data/sojourner-sol25.jpg', imageCount: 1,
+    latitude: 19.13, longitude: -33.22, image: '/mars-data/sojourner-sol25.jpg', enhancedImage: '/mars-data/sojourner-sol25-upscaled.jpg', imageCount: 1,
     imageAspect: 588 / 141, nativeWidth: 588, nativeHeight: 141, viewType: 'photo', instrument: 'FORWARD ROVER CAMERA', colorMode: 'COLOR',
     status: 'SUCCESS', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/photojournal/looking-westward-at-the-lander/',
     credit: 'NASA / JPL / UNIVERSITY OF ARIZONA',

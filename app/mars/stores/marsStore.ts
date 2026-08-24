@@ -17,6 +17,7 @@ type Flight = {
   desiredAltitude?: number;
   enterSurface?: boolean;
   regionalOverview?: boolean;
+  focusTarget?: THREE.Vector3;
 };
 
 type MarsState = {
@@ -64,11 +65,13 @@ export const useMarsStore = create<MarsState>((set) => ({
   rejectTerrainVisit: () => set({ terrainNotice: performance.now() }),
   orbitOut: () => set((state) => ({
     routeOverview: false,
+    selected: null,
     flight: {
       destination: state.cameraPoint.position.clone(),
+      focusTarget: new THREE.Vector3(),
       requestedAt: performance.now(),
       quick: false,
-      desiredAltitude: 1_800_000,
+      desiredAltitude: 4_800_000,
     },
   })),
   viewPerseveranceRoute: () => {
