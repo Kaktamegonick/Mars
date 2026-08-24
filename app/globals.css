@@ -24,21 +24,29 @@ body { overflow:hidden; font-family:var(--font-geist-mono), ui-monospace, monosp
 .hero-copy p, .panel-label { color:var(--ember); letter-spacing:.22em; font-size:9px; }
 .hero-copy h1 { margin:18px 0 22px; font:300 clamp(44px,6.4vw,92px)/.88 var(--font-geist-sans); letter-spacing:-.065em; text-wrap:balance; }
 .hero-copy span { font:400 10px/1.6 var(--font-geist-mono); letter-spacing:.04em; color:rgba(241,232,220,.55); }
-.rover-sites { position:absolute; z-index:4; right:34px; top:105px; width:276px; max-height:calc(100vh - 160px); padding:15px; overflow-y:auto; scrollbar-width:thin; border:1px solid rgba(241,232,220,.16); background:rgba(9,5,3,.58); backdrop-filter:blur(12px); }
-.rover-sites>p { margin:0 0 10px; }
+.catalog-toggle { position:absolute; z-index:4; right:34px; top:105px; min-width:230px; display:grid; grid-template-columns:1fr auto; gap:5px 18px; padding:13px 14px; border:1px solid rgba(241,232,220,.18); background:rgba(9,5,3,.58); color:var(--cream); text-align:left; cursor:pointer; backdrop-filter:blur(12px); }
+.catalog-toggle b { font:600 9px/1 var(--font-geist-sans); letter-spacing:.16em; }
+.catalog-toggle span { color:rgba(241,232,220,.45); font-size:7px; letter-spacing:.1em; }
+.catalog-toggle i { grid-column:2; grid-row:1/3; align-self:center; color:var(--ember); font:normal 18px/1 var(--font-geist-sans); }
+.catalog-toggle:hover { border-color:rgba(232,97,49,.55); }
+.mission-drawer { position:absolute; z-index:5; right:34px; top:105px; width:300px; max-height:calc(100vh - 150px); overflow-y:auto; scrollbar-width:thin; border:1px solid rgba(241,232,220,.18); background:rgba(9,5,3,.82); backdrop-filter:blur(16px); box-shadow:0 24px 80px rgba(0,0,0,.4); }
+.drawer-head { position:sticky; z-index:2; top:0; display:flex; align-items:center; justify-content:space-between; padding:13px 15px; background:rgba(9,5,3,.95); border-bottom:1px solid rgba(241,232,220,.12); }
+.drawer-head p { margin:0; }
+.drawer-head button { border:0; background:transparent; color:var(--ember); font-size:19px; cursor:pointer; }
+.rover-sites { padding:0 15px 13px; }
 .rover-sites button { width:100%; display:grid; grid-template-columns:28px 1fr; grid-template-rows:auto auto; align-items:center; padding:9px 8px; border:0; border-top:1px solid rgba(241,232,220,.1); background:transparent; color:var(--cream); text-align:left; cursor:pointer; transition:background .2s,color .2s; }
 .rover-sites button:hover,.rover-sites button.active { background:rgba(232,97,49,.13); color:#fff; }
 .rover-sites button span { grid-row:1/3; color:var(--ember); font-size:8px; }
 .rover-sites button b { font:600 9px/1.2 var(--font-geist-sans); letter-spacing:.04em; }
 .rover-sites button small { margin-top:3px; color:rgba(241,232,220,.45); font-size:7px; letter-spacing:.06em; }
 .rover-sites>i { display:block; margin:10px 7px 0; color:rgba(241,232,220,.38); font:normal 7px/1.45 var(--font-geist-mono); letter-spacing:.09em; }
-.telemetry { position:absolute; z-index:3; right:330px; top:50%; width:230px; transform:translateY(-38%); padding:18px 20px; border:1px solid rgba(241,232,220,.16); background:rgba(9,5,3,.52); backdrop-filter:blur(12px); pointer-events:none; }
+.telemetry { padding:15px 20px 18px; border-top:1px solid rgba(241,232,220,.12); pointer-events:none; }
 .telemetry dl { margin:20px 0; }
 .telemetry dl div { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(241,232,220,.08); }
 .telemetry dt { font-size:8px; color:rgba(241,232,220,.44); }
 .telemetry dd { margin:0; font-size:10px; }
 .data-source { display:flex; justify-content:space-between; padding-top:8px; color:var(--ember); font-size:8px; letter-spacing:.1em; }
-.orbit-legend { position:absolute; z-index:3; left:34px; top:112px; width:230px; padding:13px 15px; border-left:1px solid var(--ember); background:rgba(9,5,3,.48); backdrop-filter:blur(10px); }
+.orbit-legend { padding:14px 20px; border-top:1px solid rgba(241,232,220,.12); border-left:1px solid var(--ember); }
 .orbit-legend p { margin:0 0 9px; }
 .orbit-legend>div { display:flex; align-items:center; gap:8px; font-size:8px; letter-spacing:.08em; }
 .orbit-swatch { width:36px; border-top:1px dashed var(--ember); }
@@ -87,4 +95,4 @@ body { overflow:hidden; font-family:var(--font-geist-mono), ui-monospace, monosp
 .scale span { display:block; width:100px; height:5px; margin:0 auto 7px; border-left:1px solid var(--cream); border-right:1px solid var(--cream); border-top:1px solid var(--cream); }
 .statusbar { position:absolute; z-index:3; left:0; right:0; bottom:0; display:flex; gap:32px; padding:11px 34px; border-top:1px solid rgba(241,232,220,.14); font-size:7px; letter-spacing:.15em; color:rgba(241,232,220,.42); pointer-events:none; }
 .statusbar span:last-child { margin-left:auto; }
-@media (max-width:760px) { .telemetry,.orbit-legend{display:none}.hero-copy{left:20px;top:20%;transform:none}.hero-copy h1{font-size:43px}.topbar,.surface-topbar{padding:18px 20px}.live-pill,.surface-button{display:none}.rover-sites{right:16px;top:auto;bottom:48px;width:245px;max-height:55vh}.statusbar{padding:11px 18px}.statusbar span:nth-child(2){display:none}.target-readout{display:none}.scale{display:none}.archive-photo img{width:100vw;max-height:70vh}.surface-caption{left:18px;bottom:18px;width:calc(100vw - 36px)}.surface-stations{right:18px;top:86px;width:210px;max-height:42vh}.surface-hint{display:none} }
+@media (max-width:760px) { .hero-copy{left:20px;top:20%;transform:none}.hero-copy h1{font-size:43px}.topbar,.surface-topbar{padding:18px 20px}.live-pill,.surface-button{display:none}.catalog-toggle{right:16px;top:84px;min-width:210px}.mission-drawer{right:16px;top:84px;width:min(300px,calc(100vw - 32px));max-height:calc(100vh - 132px)}.statusbar{padding:11px 18px}.statusbar span:nth-child(2){display:none}.target-readout{display:none}.scale{display:none}.archive-photo img{width:100vw;max-height:70vh}.surface-caption{left:18px;bottom:18px;width:calc(100vw - 36px)}.surface-stations{right:18px;top:86px;width:210px;max-height:42vh}.surface-hint{display:none} }

@@ -1,10 +1,12 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useMarsStore } from '../stores/marsStore';
 import { ROVER_STATIONS } from '../data/roverStations';
 import { formatDistance, formatElevation, formatLatitude, formatLongitude } from '../utils/coordinates';
 
 export function HUD() {
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const cameraPoint = useMarsStore((state) => state.cameraPoint);
   const hover = useMarsStore((state) => state.hover);
   const selected = useMarsStore((state) => state.selected);
@@ -16,6 +18,14 @@ export function HUD() {
   const orbitOut = useMarsStore((state) => state.orbitOut);
   const activeStationId = useMarsStore((state) => state.activeStationId);
   const visitStation = useMarsStore((state) => state.visitStation);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setCatalogOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, []);
 
   return (
     <>
@@ -33,36 +43,49 @@ export function HUD() {
         <span>Drag to orbit · scroll to descend · choose a verified rover site</span>
       </section>
 
-      <nav className="rover-sites" aria-label="Verified Mars rover surface stations">
-        <p className="panel-label">ROVERS / VERIFIED ARCHIVE</p>
-        {ROVER_STATIONS.map((station, index) => (
-          <button key={station.id} className={station.id === activeStationId ? 'active' : ''} onClick={() => visitStation(station.id)}>
-            <span>{String(index + 1).padStart(2, '0')}</span>
-            <b>{station.rover} · {station.name}</b>
-            <small>{station.year} · {formatLatitude(station.latitude)} · {station.status}</small>
-          </button>
-        ))}
-        <i>EVERY IMAGE IS ATTRIBUTED TO THE CAMERA THAT ACTUALLY CAPTURED IT</i>
-      </nav>
+      <button
+        className="catalog-toggle"
+        aria-expanded={catalogOpen}
+        aria-controls="mission-index"
+        onClick={() => setCatalogOpen((open) => !open)}
+      >
+        <b>MISSION INDEX</b><span>{ROVER_STATIONS.length.toString().padStart(2, '0')} VERIFIED SITES</span><i>{catalogOpen ? '×' : '+'}</i>
+      </button>
 
-      <aside className="orbit-legend">
-        <p className="panel-label">MRO / REFERENCE ORBIT</p>
-        <div><span className="orbit-swatch" /> <b>255–320 KM · 92.7°</b></div>
-        <small>NEAR-POLAR SCIENCE ORBIT · 112 MIN<br />ANIMATED AT ACCELERATED SPEED</small>
-        <a href="https://science.nasa.gov/wp-content/uploads/2024/03/44745_mro-arrival.pdf" target="_blank" rel="noreferrer">NASA ORBIT SOURCE ↗</a>
-      </aside>
+      {catalogOpen && (
+        <aside className="mission-drawer" id="mission-index">
+          <div className="drawer-head"><p className="panel-label">ROVERS / VERIFIED ARCHIVE</p><button onClick={() => setCatalogOpen(false)} aria-label="Close mission index">×</button></div>
+          <nav className="rover-sites" aria-label="Verified Mars rover surface stations">
+            {ROVER_STATIONS.map((station, index) => (
+              <button key={station.id} className={station.id === activeStationId ? 'active' : ''} onClick={() => { setCatalogOpen(false); visitStation(station.id); }}>
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                <b>{station.rover} · {station.name}</b>
+                <small>{station.year} · {formatLatitude(station.latitude)} · {station.status}</small>
+              </button>
+            ))}
+            <i>EVERY IMAGE IS ATTRIBUTED TO THE CAMERA THAT ACTUALLY CAPTURED IT</i>
+          </nav>
 
-      <aside className="telemetry">
-        <p className="panel-label">NAV / GLOBAL</p>
-        <dl>
-          <div><dt>LATITUDE</dt><dd>{formatLatitude(cameraPoint.latitude)}</dd></div>
-          <div><dt>LONGITUDE</dt><dd>{formatLongitude(cameraPoint.longitude)}</dd></div>
-          <div><dt>ELEVATION</dt><dd>{formatElevation(cameraPoint.elevation)}</dd></div>
-          <div><dt>ALTITUDE</dt><dd>{formatDistance(altitude)}</dd></div>
-          <div><dt>ZOOM LEVEL</dt><dd>{zoom.toFixed(1)}×</dd></div>
-        </dl>
-        <div className="data-source"><span>MOLA / MGS</span><span>GLOBAL DTM</span></div>
-      </aside>
+          <section className="orbit-legend">
+            <p className="panel-label">MRO / REFERENCE ORBIT</p>
+            <div><span className="orbit-swatch" /> <b>255–320 KM · 92.7°</b></div>
+            <small>NEAR-POLAR SCIENCE ORBIT · 112 MIN<br />ANIMATED AT ACCELERATED SPEED</small>
+            <a href="https://science.nasa.gov/wp-content/uploads/2024/03/44745_mro-arrival.pdf" target="_blank" rel="noreferrer">NASA ORBIT SOURCE ↗</a>
+          </section>
+
+          <section className="telemetry">
+            <p className="panel-label">NAV / GLOBAL</p>
+            <dl>
+              <div><dt>LATITUDE</dt><dd>{formatLatitude(cameraPoint.latitude)}</dd></div>
+              <div><dt>LONGITUDE</dt><dd>{formatLongitude(cameraPoint.longitude)}</dd></div>
+              <div><dt>ELEVATION</dt><dd>{formatElevation(cameraPoint.elevation)}</dd></div>
+              <div><dt>ALTITUDE</dt><dd>{formatDistance(altitude)}</dd></div>
+              <div><dt>ZOOM LEVEL</dt><dd>{zoom.toFixed(1)}×</dd></div>
+            </dl>
+            <div className="data-source"><span>MOLA / MGS</span><span>GLOBAL DTM</span></div>
+          </section>
+        </aside>
+      )}
 
       {hover && (
         <aside className="target-readout">
