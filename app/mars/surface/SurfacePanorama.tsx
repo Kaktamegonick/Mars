@@ -56,21 +56,63 @@ function SurfaceLookController() {
 
 function RoverPanorama({ station }: { station: RoverStation }) {
   const loadedTexture = useLoader(THREE.TextureLoader, station.image!);
+  const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy());
   const texture = useMemo(() => {
     const panoramaTexture = loadedTexture.clone();
     panoramaTexture.colorSpace = THREE.SRGBColorSpace;
     panoramaTexture.wrapS = THREE.RepeatWrapping;
     panoramaTexture.repeat.x = -1;
     panoramaTexture.offset.x = 1;
+    panoramaTexture.anisotropy = Math.min(8, maxAnisotropy);
+    panoramaTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    panoramaTexture.magFilter = THREE.LinearFilter;
     panoramaTexture.needsUpdate = true;
     return panoramaTexture;
-  }, [loadedTexture]);
+  }, [loadedTexture, maxAnisotropy]);
   useEffect(() => () => texture.dispose(), [texture]);
   const cylinderHeight = THREE.MathUtils.clamp((Math.PI * 20) / station.imageAspect, 12, 18);
   return (
     <mesh rotation={[0, Math.PI / 2, 0]}>
       <cylinderGeometry args={[10, 10, cylinderHeight, 160, 1, true]} />
       <meshBasicMaterial map={texture} side={THREE.BackSide} toneMapped={false} />
+    </mesh>
+  );
+}
+
+const SKY_VERTEX_SHADER = `
+  varying float vHeight;
+  void main() {
+    vHeight = normalize(position).y;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const SKY_FRAGMENT_SHADER = `
+  varying float vHeight;
+  void main() {
+    vec3 zenith = vec3(0.24, 0.105, 0.055);
+    vec3 upperSky = vec3(0.48, 0.245, 0.13);
+    vec3 horizon = vec3(0.72, 0.42, 0.25);
+    vec3 ground = vec3(0.16, 0.065, 0.03);
+    float upperBlend = smoothstep(0.02, 0.78, vHeight);
+    vec3 sky = mix(horizon, upperSky, upperBlend);
+    sky = mix(sky, zenith, smoothstep(0.68, 1.0, vHeight));
+    vec3 color = mix(ground, sky, smoothstep(-0.28, 0.02, vHeight));
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
+
+function SurfaceSky() {
+  return (
+    <mesh>
+      <sphereGeometry args={[11.5, 96, 48]} />
+      <shaderMaterial
+        vertexShader={SKY_VERTEX_SHADER}
+        fragmentShader={SKY_FRAGMENT_SHADER}
+        side={THREE.BackSide}
+        depthWrite={false}
+        toneMapped={false}
+      />
     </mesh>
   );
 }
@@ -99,22 +141,26 @@ export function SurfacePanorama() {
   return (
     <section className="surface-view" aria-label={`${station.rover} archive at ${station.name}`}>
       {station.viewType === 'panorama' && (
-        <Canvas camera={{ position: [0, 0, 0.001], fov: 55, near: 0.01, far: 30 }} gl={{ antialias: true }} dpr={[1, 1.6]}>
-          <color attach="background" args={['#9c5c38']} />
+        <Canvas camera={{ position: [0, 0, 0.001], fov: 55, near: 0.01, far: 30 }} gl={{ antialias: true }} dpr={[1, 2]}>
+          <color attach="background" args={['#7a4129']} />
+          <SurfaceSky />
           <RoverPanorama station={station} />
           <SurfaceLookController />
         </Canvas>
       )}
       {station.viewType === 'photo' && station.image && (
-        <div className="archive-photo">
+        <div className={`archive-photo${station.nativeWidth ? ' source-limited' : ''}`}>
           <div style={{ backgroundImage: `url(${station.image})` }} />
           <Image
             src={station.image}
             alt={`${station.rover} camera view at ${station.name}`}
-            width={1600}
-            height={Math.round(1600 / station.imageAspect)}
+            width={station.nativeWidth ?? 1600}
+            height={station.nativeHeight ?? Math.round(1600 / station.imageAspect)}
             unoptimized
           />
+          {station.nativeWidth && station.nativeHeight && (
+            <span className="archive-resolution">ORIGINAL CAMERA RESOLUTION · {station.nativeWidth} × {station.nativeHeight}</span>
+          )}
         </div>
       )}
       {station.viewType === 'none' && (

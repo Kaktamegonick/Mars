@@ -27,6 +27,8 @@ export type RoverStation = {
   image: string | null;
   imageCount: number | null;
   imageAspect: number;
+  nativeWidth?: number;
+  nativeHeight?: number;
   viewType: 'panorama' | 'photo' | 'none';
   instrument: string;
   colorMode: string;
@@ -52,16 +54,16 @@ export const ROVER_STATIONS: RoverStation[] = [
     id: 'sojourner', rover: 'Sojourner', mission: 'Mars Pathfinder', operator: 'USA / NASA', year: '1997',
     name: 'Sagan Memorial Station', region: 'Ares Vallis · landing site', sol: 'SOL 25', date: '29 JUL 1997',
     latitude: 19.13, longitude: -33.22, image: '/mars-data/sojourner-sol25.jpg', imageCount: 1,
-    imageAspect: 588 / 141, viewType: 'photo', instrument: 'FORWARD ROVER CAMERA', colorMode: 'COLOR',
+    imageAspect: 588 / 141, nativeWidth: 588, nativeHeight: 141, viewType: 'photo', instrument: 'FORWARD ROVER CAMERA', colorMode: 'COLOR',
     status: 'SUCCESS', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/photojournal/looking-westward-at-the-lander/',
     credit: 'NASA / JPL / UNIVERSITY OF ARIZONA',
   },
   {
     id: 'spirit', rover: 'Spirit', mission: 'Mars Exploration Rover A', operator: 'USA / NASA', year: '2004',
-    name: 'Columbia Memorial Station', region: 'Gusev Crater · landing site', sol: 'SOL 1', date: '04 JAN 2004',
-    latitude: -14.5684, longitude: 175.4726, image: '/mars-data/spirit-landing.jpg', imageCount: 1,
-    imageAspect: 1892 / 383, viewType: 'photo', instrument: 'LEFT NAVIGATION CAMERA', colorMode: 'MONOCHROME',
-    status: 'SUCCESS', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/photojournal/left-panorama-of-spirits-landing-site/',
+    name: 'Columbia Memorial Station', region: 'Gusev Crater · landing site', sol: 'EARLY MISSION', date: 'JAN 2004',
+    latitude: -14.5684, longitude: 175.4726, image: '/mars-data/spirit-landing-360.jpg', imageCount: null,
+    imageAspect: 11220 / 1385, viewType: 'panorama', instrument: 'PANORAMIC CAMERA', colorMode: 'COLOR',
+    status: 'SUCCESS', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/photojournal/mars-in-full-view/',
     credit: 'NASA / JPL / CORNELL',
   },
   {
@@ -76,8 +78,8 @@ export const ROVER_STATIONS: RoverStation[] = [
     id: 'curiosity', rover: 'Curiosity', mission: 'Mars Science Laboratory', operator: 'USA / NASA', year: '2012',
     name: 'Bradbury Landing', region: 'Gale Crater · landing site', sol: 'SOL 2', date: '08 AUG 2012',
     latitude: -4.5895, longitude: 137.4417, image: '/mars-data/curiosity-landing-360.jpg', imageCount: null,
-    imageAspect: 2000 / 255, viewType: 'panorama', instrument: 'NAVIGATION CAMERAS', colorMode: 'COLOR',
-    status: 'ACTIVE', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/resource/curiosity-takes-it-all-in/',
+    imageAspect: 7719 / 983, viewType: 'panorama', instrument: 'NAVIGATION CAMERAS', colorMode: 'COLOR',
+    status: 'ACTIVE', sourceLabel: 'NASA', sourceUrl: 'https://science.nasa.gov/photojournal/curiosity-takes-it-all-in/',
     credit: 'NASA / JPL-CALTECH',
   },
   {
