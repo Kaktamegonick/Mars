@@ -371,6 +371,7 @@ export function DreamerSurface() {
         <i className="helmet-bolt helmet-bolt-right" />
       </div>
       <div className="dreamer-glass" aria-hidden="true"><i /><b /><span /></div>
+      <div className="dreamer-visor-effects" aria-hidden="true"><i /><b /></div>
       <button className="dreamer-reveal" onClick={() => setUiHidden(false)}>RAISE HUD</button>
       <button className="dreamer-exit" onClick={exitDreamerView}>EXIT TO ORBIT ↑</button>
 
