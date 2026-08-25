@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import * as THREE from 'three';
 import { useMarsStore, type MarsPoint } from '../stores/marsStore';
 import { formatElevation, formatLatitude, formatLongitude } from '../utils/coordinates';
@@ -129,12 +129,53 @@ function DreamerDust() {
   );
 }
 
+function MartianSky() {
+  const material = useMemo(() => new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    uniforms: {
+      horizonColor: { value: new THREE.Color('#c76b43') },
+      zenithColor: { value: new THREE.Color('#160d0b') },
+      sunColor: { value: new THREE.Color('#ffe1bd') },
+    },
+    vertexShader: `
+      varying vec3 vDirection;
+      void main() {
+        vDirection = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vDirection;
+      uniform vec3 horizonColor;
+      uniform vec3 zenithColor;
+      uniform vec3 sunColor;
+      void main() {
+        float height = clamp(vDirection.y * 0.72 + 0.3, 0.0, 1.0);
+        float gradient = smoothstep(0.02, 0.82, height);
+        vec3 color = mix(horizonColor, zenithColor, gradient);
+        vec3 sunDirection = normalize(vec3(-0.58, 0.24, -0.78));
+        float sun = pow(max(dot(vDirection, sunDirection), 0.0), 620.0);
+        float halo = pow(max(dot(vDirection, sunDirection), 0.0), 18.0) * 0.2;
+        color += sunColor * (sun * 1.8 + halo);
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+  }), []);
+  useEffect(() => () => material.dispose(), [material]);
+  return (
+    <mesh scale={190} material={material} renderOrder={-10}>
+      <sphereGeometry args={[1, 48, 28]} />
+    </mesh>
+  );
+}
+
 function DreamerLookController({ onTelemetry }: { onTelemetry: (telemetry: LookTelemetry) => void }) {
   const { gl } = useThree();
   const yaw = useRef(0);
-  const pitch = useRef(-0.045);
+  const pitch = useRef(-0.11);
   const targetYaw = useRef(0);
-  const targetPitch = useRef(-0.045);
+  const targetPitch = useRef(-0.11);
   const fov = useRef(56);
   const telemetryTimer = useRef(0);
 
@@ -185,7 +226,7 @@ function DreamerLookController({ onTelemetry }: { onTelemetry: (telemetry: LookT
       if (event.key === 'ArrowDown') targetPitch.current = Math.max(-0.48, targetPitch.current - 0.05);
       if (event.key === '+' || event.key === '=') fov.current = Math.max(32, fov.current - 6);
       if (event.key === '-' || event.key === '_') fov.current = Math.min(72, fov.current + 6);
-      if (event.key === '0') { targetYaw.current = 0; targetPitch.current = -0.045; fov.current = 56; }
+      if (event.key === '0') { targetYaw.current = 0; targetPitch.current = -0.11; fov.current = 56; }
     };
     element.addEventListener('pointerdown', down);
     element.addEventListener('pointermove', move);
@@ -230,16 +271,13 @@ function DreamerLookController({ onTelemetry }: { onTelemetry: (telemetry: LookT
 function DreamerScene({ point, onReady, onTelemetry }: { point: MarsPoint; onReady: () => void; onTelemetry: (telemetry: LookTelemetry) => void }) {
   return (
     <>
-      <color attach="background" args={['#8d4329']} />
-      <fog attach="fog" args={['#9b5033', 38, 150]} />
-      <hemisphereLight args={['#ffcab0', '#35150d', 1.7]} />
-      <directionalLight position={[-32, 42, 18]} intensity={3.6} color="#ffd6b4" castShadow />
+      <color attach="background" args={['#160d0b']} />
+      <fog attach="fog" args={['#9e5133', 48, 158]} />
+      <MartianSky />
+      <hemisphereLight args={['#ffd0b2', '#24100b', 1.35]} />
+      <directionalLight position={[-32, 42, 18]} intensity={3.15} color="#ffd8b9" />
       <Suspense fallback={null}><DreamerTerrain point={point} onReady={onReady} /></Suspense>
       <DreamerDust />
-      <mesh position={[-72, 34, -110]}>
-        <sphereGeometry args={[5.2, 32, 20]} />
-        <meshBasicMaterial color="#ffd4a1" toneMapped={false} />
-      </mesh>
       <DreamerLookController onTelemetry={onTelemetry} />
     </>
   );
@@ -254,7 +292,8 @@ export function DreamerSurface() {
   const [bootComplete, setBootComplete] = useState(false);
   const [uiHidden, setUiHidden] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
-  const [telemetry, setTelemetry] = useState<LookTelemetry>({ heading: 0, pitch: -2.6, fov: 56 });
+  const [telemetry, setTelemetry] = useState<LookTelemetry>({ heading: 0, pitch: -6.3, fov: 56 });
+  const [localTime, setLocalTime] = useState('--:--');
   const markReady = useCallback(() => setSceneReady(true), []);
   const updateTelemetry = useCallback((next: LookTelemetry) => setTelemetry(next), []);
 
@@ -263,6 +302,13 @@ export function DreamerSurface() {
     const timer = window.setTimeout(() => setBootComplete(true), 1450);
     return () => window.clearTimeout(timer);
   }, [sceneReady]);
+
+  useEffect(() => {
+    const updateTime = () => setLocalTime(new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()));
+    updateTime();
+    const timer = window.setInterval(updateTime, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const updateFullscreen = () => setFullscreen(Boolean(document.fullscreenElement));
@@ -286,18 +332,22 @@ export function DreamerSurface() {
   }, [exitDreamerView, toggleFullscreen]);
 
   const heading = Math.round(telemetry.heading).toString().padStart(3, '0');
-  const localTime = new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+  const hudMotion = {
+    '--hud-x': `${THREE.MathUtils.clamp((telemetry.heading > 180 ? telemetry.heading - 360 : telemetry.heading) * -0.035, -7, 7)}px`,
+    '--hud-y': `${THREE.MathUtils.clamp(telemetry.pitch * 0.12, -4, 4)}px`,
+  } as CSSProperties;
 
   return (
     <section className={`dreamer-view${uiHidden ? ' ui-hidden' : ''}`} aria-label="Dreamer mode simulated Mars surface">
-      <Canvas shadows camera={{ position: [0, 3.15, 9], fov: 56, near: 0.05, far: 260 }} gl={{ antialias: true, powerPreference: 'high-performance' }} dpr={[1, 1.6]}>
+      <Canvas camera={{ position: [0, 3.15, 9], fov: 56, near: 0.05, far: 260 }} gl={{ antialias: true, powerPreference: 'high-performance' }} dpr={[1, 1.6]}>
         <DreamerScene point={point} onReady={markReady} onTelemetry={updateTelemetry} />
       </Canvas>
 
+      <div className="dreamer-helmet" aria-hidden="true"><i /><b /><span /><em /></div>
       <div className="dreamer-glass" aria-hidden="true"><i /><b /><span /></div>
       <button className="dreamer-reveal" onClick={() => setUiHidden(false)}>RAISE HUD</button>
 
-      <div className="dreamer-hud">
+      <div className="dreamer-hud" style={hudMotion}>
         <header className="dreamer-topline">
           <div><strong>DREAMER</strong><span>EXTRAVEHICULAR SIMULATION</span></div>
           <p><i /> VISOR LINK · NOMINAL</p>
