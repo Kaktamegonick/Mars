@@ -6,7 +6,10 @@ import * as THREE from 'three';
 import { useMarsStore } from '../stores/marsStore';
 import { formatElevation, formatLatitude, formatLongitude } from '../utils/coordinates';
 
-const DREAMER_PANORAMA = '/mars-data/dreamer-mars-360.png';
+const DREAMER_PANORAMAS = [
+  '/mars-data/dreamer-mars-360.png',
+  '/mars-data/dreamer-mars-360-sunset.png',
+] as const;
 
 type LookTelemetry = { heading: number; pitch: number; fov: number };
 
@@ -14,8 +17,8 @@ function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-function DreamerPanoramaTexture({ onReady }: { onReady: () => void }) {
-  const loadedTexture = useLoader(THREE.TextureLoader, DREAMER_PANORAMA);
+function DreamerPanoramaTexture({ onReady, source }: { onReady: () => void; source: string }) {
+  const loadedTexture = useLoader(THREE.TextureLoader, source);
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy());
   const texture = useMemo(() => {
     const panorama = loadedTexture.clone();
@@ -275,7 +278,7 @@ function DreamerLookController({ onTelemetry }: { onTelemetry: (telemetry: LookT
   return null;
 }
 
-function DreamerPanorama({ onReady, onTelemetry }: { onReady: () => void; onTelemetry: (telemetry: LookTelemetry) => void }) {
+function DreamerPanorama({ onReady, onTelemetry, source }: { onReady: () => void; onTelemetry: (telemetry: LookTelemetry) => void; source: string }) {
   return (
     <div className="dreamer-panorama" aria-hidden="true">
       <Canvas
@@ -284,7 +287,9 @@ function DreamerPanorama({ onReady, onTelemetry }: { onReady: () => void; onTele
         gl={{ antialias: true, powerPreference: 'high-performance' }}
       >
         <color attach="background" args={['#8a4f37']} />
-        <Suspense fallback={null}><DreamerPanoramaTexture onReady={onReady} /></Suspense>
+        <Suspense fallback={null}>
+          <DreamerPanoramaTexture source={source} onReady={onReady} />
+        </Suspense>
         <DreamerDustField />
         <DreamerLookController onTelemetry={onTelemetry} />
       </Canvas>
@@ -299,6 +304,7 @@ function DreamerPanorama({ onReady, onTelemetry }: { onReady: () => void; onTele
 export function DreamerSurface() {
   const dreamerPoint = useMarsStore((state) => state.dreamerPoint);
   const cameraPoint = useMarsStore((state) => state.cameraPoint);
+  const panoramaIndex = useMarsStore((state) => state.dreamerPanoramaIndex);
   const exitDreamerView = useMarsStore((state) => state.exitDreamerView);
   const point = dreamerPoint ?? cameraPoint;
   const [sceneReady, setSceneReady] = useState(false);
@@ -352,7 +358,7 @@ export function DreamerSurface() {
 
   return (
     <section className={`dreamer-view${uiHidden ? ' ui-hidden' : ''}`} aria-label="Dreamer mode imagined Mars surface">
-      <DreamerPanorama onReady={markReady} onTelemetry={updateTelemetry} />
+      <DreamerPanorama source={DREAMER_PANORAMAS[panoramaIndex]} onReady={markReady} onTelemetry={updateTelemetry} />
 
       <div className="dreamer-helmet" aria-hidden="true">
         <div className="helmet-crown" />
