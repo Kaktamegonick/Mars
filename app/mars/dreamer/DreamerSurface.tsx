@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { useMarsStore } from '../stores/marsStore';
 import { formatElevation, formatLatitude, formatLongitude } from '../utils/coordinates';
 
-const DREAMER_PANORAMA = '/mars-data/dreamer-mars-360-dusty.png';
+const DREAMER_PANORAMA = '/mars-data/dreamer-mars-360.png';
 
 type LookTelemetry = { heading: number; pitch: number; fov: number };
 type WindParticle = { x: number; y: number; speed: number; drift: number; length: number; size: number; alpha: number };
@@ -381,7 +381,7 @@ export function DreamerSurface() {
   } as CSSProperties;
 
   return (
-    <section className={`dreamer-view${uiHidden ? ' ui-hidden' : ''}${fullscreen ? ' is-fullscreen' : ''}`} aria-label="Dreamer mode imagined Mars surface">
+    <section className={`dreamer-view${uiHidden ? ' ui-hidden' : ''}`} aria-label="Dreamer mode imagined Mars surface">
       <DreamerPanorama onReady={markReady} onTelemetry={updateTelemetry} />
 
       <div className="dreamer-helmet" aria-hidden="true">

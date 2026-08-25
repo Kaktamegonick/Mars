@@ -323,13 +323,3 @@ button:disabled { cursor:wait; opacity:.48; }
 @media (max-width:620px) {
   .dreamer-button{padding:8px 9px;font-size:6px}.route-button{display:none}.dreamer-hud{inset:10% 8.5% 17%}.dreamer-bearing{width:58vw}.dreamer-bearing-scale{height:9px}.dreamer-bearing span{font-size:5px}.dreamer-readout{top:15%;width:135px}.dreamer-readout strong{font-size:7px}.dreamer-environment strong{max-width:120px;line-height:1.5}.dreamer-pressure{display:none}.dreamer-systems{right:0;bottom:12%;width:125px}.dreamer-systems>div{grid-template-columns:43px 1fr 23px;gap:3px}.dreamer-reticle{width:54px;height:54px}.dreamer-footer{display:none}.dreamer-glass{inset:6.7% 3.7% 8.7%;border-width:1px;border-radius:19% 19% 22% 22% / 11% 11% 16% 16%}.helmet-seal{inset:5.6% 2.6% 7.5%}.helmet-seal-inner{inset:6.7% 3.5% 8.6%}.helmet-chin{height:20%}.dreamer-exit{bottom:3%;padding-inline:12px}
 }
-@media (min-width:761px) {
-  .dreamer-view.is-fullscreen .dreamer-glass{inset:4.7% 2.1% 5.8%;border-radius:15% 15% 19% 19% / 11% 11% 17% 17%;box-shadow:0 0 0 2px #55463c,0 0 0 6px #080b0b,0 0 0 9px #34302b,0 0 0 13px #050606,0 0 0 120px #010202,inset 0 0 62px rgba(18,5,1,.17),inset 0 0 0 1px rgba(255,236,217,.16)}
-  .dreamer-view.is-fullscreen .dreamer-helmet{filter:drop-shadow(0 10px 24px rgba(0,0,0,.38))}
-  .dreamer-view.is-fullscreen .helmet-crown{height:10.8%}
-  .dreamer-view.is-fullscreen .helmet-side{top:3.8%;bottom:5%;width:4.7%}
-  .dreamer-view.is-fullscreen .helmet-chin{height:14.5%}
-  .dreamer-view.is-fullscreen .helmet-seal{inset:3.8% 1.25% 4.7%}
-  .dreamer-view.is-fullscreen .helmet-seal-inner{inset:4.8% 2% 5.8%}
-  .dreamer-view.is-fullscreen .helmet-bolt{bottom:2.7%}
-}
