@@ -9,9 +9,6 @@ import { formatElevation, formatLatitude, formatLongitude } from '../utils/coord
 const DREAMER_PANORAMA = '/mars-data/dreamer-mars-360.png';
 
 type LookTelemetry = { heading: number; pitch: number; fov: number };
-type WindParticle = { x: number; y: number; speed: number; drift: number; length: number; size: number; alpha: number };
-type VisorParticle = { angle: number; distance: number; depth: number; speed: number; size: number; alpha: number };
-type NearParticle = { x: number; y: number; velocityX: number; velocityY: number; size: number; alpha: number; life: number; maxLife: number };
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -42,6 +39,133 @@ function DreamerPanoramaTexture({ onReady }: { onReady: () => void }) {
       <sphereGeometry args={[10, 128, 72]} />
       <meshBasicMaterial map={texture} side={THREE.BackSide} toneMapped={false} />
     </mesh>
+  );
+}
+
+const DUST_VERTEX_SHADER = `
+  uniform float uTime;
+  uniform float uPixelRatio;
+  uniform float uSize;
+  uniform float uOpacity;
+  attribute float aSize;
+  attribute float aPhase;
+  attribute vec2 aDrift;
+  varying float vAlpha;
+  varying float vGlow;
+
+  void main() {
+    vec3 particle = position;
+    float wind = uTime * (0.14 + aSize * 0.05);
+    particle.x = mod(particle.x + wind + 7.0, 14.0) - 7.0;
+    particle.z = mod(particle.z + wind * 0.36 + 7.0, 14.0) - 7.0;
+    particle.y = mod(particle.y - uTime * (0.025 + aSize * 0.026) + 3.5, 7.0) - 3.5;
+
+    float turbulence = sin(uTime * 0.52 + aPhase * 17.0 + particle.z * 0.8)
+      + cos(uTime * 0.31 + aPhase * 11.0 + particle.x * 0.55);
+    particle.y += turbulence * 0.07 * (0.45 + aDrift.x);
+    particle.z += sin(uTime * 0.4 + aPhase * 23.0) * 0.08 * aDrift.y;
+
+    vec4 viewPosition = modelViewMatrix * vec4(particle, 1.0);
+    float depth = -viewPosition.z;
+    float inFront = step(0.08, depth);
+    float nearFade = smoothstep(0.34, 0.9, depth);
+    float farFade = 1.0 - smoothstep(5.8, 7.8, depth);
+    float baseSize = mix(1.0, 4.4, aSize) * uSize * uPixelRatio;
+
+    gl_Position = projectionMatrix * viewPosition;
+    gl_PointSize = clamp(baseSize * (2.8 / max(depth, 0.2)), 0.65, 12.0) * inFront;
+    vAlpha = (0.2 + aSize * 0.34) * nearFade * farFade * inFront * uOpacity;
+    vGlow = aSize;
+  }
+`;
+
+const DUST_FRAGMENT_SHADER = `
+  uniform vec3 uColor;
+  varying float vAlpha;
+  varying float vGlow;
+
+  void main() {
+    vec2 point = gl_PointCoord - vec2(0.5);
+    float distanceFromCentre = length(point) * 2.0;
+    float softEdge = smoothstep(1.0, 0.1, distanceFromCentre);
+    float core = smoothstep(0.34, 0.0, distanceFromCentre);
+    float alpha = (softEdge * 0.58 + core * 0.42) * vAlpha;
+    vec3 color = mix(uColor, vec3(1.0, 0.93, 0.82), core * (0.2 + vGlow * 0.35));
+    if (alpha < 0.006) discard;
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
+
+function DreamerDustField() {
+  const points = useRef<THREE.Points>(null);
+  const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const particleCount = 920;
+  const { geometry, material } = useMemo(() => {
+    const dustGeometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const sizes = new Float32Array(particleCount);
+    const phases = new Float32Array(particleCount);
+    const drifts = new Float32Array(particleCount * 2);
+    let randomSeed = 1977;
+    const random = () => {
+      randomSeed = (randomSeed * 16807) % 2147483647;
+      return (randomSeed - 1) / 2147483646;
+    };
+
+    for (let index = 0; index < particleCount; index += 1) {
+      const offset = index * 3;
+      positions[offset] = (random() - 0.5) * 14;
+      positions[offset + 1] = (random() - 0.5) * 7;
+      positions[offset + 2] = (random() - 0.5) * 14;
+      sizes[index] = Math.pow(random(), 2.15);
+      phases[index] = random();
+      drifts[index * 2] = random();
+      drifts[index * 2 + 1] = random();
+    }
+
+    dustGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    dustGeometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+    dustGeometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
+    dustGeometry.setAttribute('aDrift', new THREE.BufferAttribute(drifts, 2));
+    const dustMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uPixelRatio: { value: typeof window === 'undefined' ? 1 : Math.min(window.devicePixelRatio || 1, 1.5) },
+        uSize: { value: 0.9 },
+        uOpacity: { value: 0.72 },
+        uColor: { value: new THREE.Color('#ffe2b8') },
+      },
+      vertexShader: DUST_VERTEX_SHADER,
+      fragmentShader: DUST_FRAGMENT_SHADER,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthTest: true,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    return { geometry: dustGeometry, material: dustMaterial };
+  }, [particleCount]);
+
+  useEffect(() => {
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateVisibility = () => { if (points.current) points.current.visible = !motionQuery.matches; };
+    updateVisibility();
+    motionQuery.addEventListener('change', updateVisibility);
+    return () => {
+      motionQuery.removeEventListener('change', updateVisibility);
+      geometry.dispose();
+      material.dispose();
+    };
+  }, [geometry, material]);
+
+  useFrame(({ clock }) => {
+    if (materialRef.current) materialRef.current.uniforms.uTime.value = clock.getElapsedTime();
+  });
+
+  return (
+    <points ref={points} geometry={geometry} frustumCulled={false} renderOrder={2}>
+      <primitive ref={materialRef} object={material} attach="material" />
+    </points>
   );
 }
 
@@ -152,160 +276,6 @@ function DreamerLookController({ onTelemetry }: { onTelemetry: (telemetry: LookT
 }
 
 function DreamerPanorama({ onReady, onTelemetry }: { onReady: () => void; onTelemetry: (telemetry: LookTelemetry) => void }) {
-  const dustCanvas = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = dustCanvas.current;
-    if (!canvas) return;
-    const context = canvas.getContext('2d');
-    if (!context) return;
-
-    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let animationFrame = 0;
-    let previousTime = performance.now();
-    let width = 1;
-    let height = 1;
-    let wind: WindParticle[] = [];
-    let visor: VisorParticle[] = [];
-    let near: NearParticle[] = [];
-
-    const resetNearParticle = (particle: NearParticle, stagger = false) => {
-      const fromLeft = Math.random() > 0.5;
-      const upperEdge = Math.random() > 0.54;
-      particle.x = fromLeft ? -20 - Math.random() * 60 : width + 20 + Math.random() * 60;
-      particle.y = upperEdge ? Math.random() * height * 0.25 : height * (0.72 + Math.random() * 0.28);
-      particle.velocityX = (fromLeft ? 1 : -1) * (34 + Math.random() * 62);
-      particle.velocityY = -13 + Math.random() * 26;
-      particle.size = 2.4 + Math.random() * 5.6;
-      particle.alpha = 0.055 + Math.random() * 0.1;
-      particle.maxLife = 3.8 + Math.random() * 4.5;
-      particle.life = stagger ? Math.random() * particle.maxLife : 0;
-    };
-
-    const createParticles = () => {
-      const density = clamp(Math.floor((width * height) / 10_500), 68, 150);
-      wind = Array.from({ length: density }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        speed: 45 + Math.random() * 120,
-        drift: -9 + Math.random() * 20,
-        length: 5 + Math.random() * 23,
-        size: 0.35 + Math.random() * 1.05,
-        alpha: 0.035 + Math.random() * 0.16,
-      }));
-      visor = Array.from({ length: Math.round(density * 0.2) }, () => ({
-        angle: Math.random() * Math.PI * 2,
-        distance: 12 + Math.random() * Math.min(width, height) * 0.34,
-        depth: Math.random(),
-        speed: 0.13 + Math.random() * 0.28,
-        size: 0.45 + Math.random() * 1.15,
-        alpha: 0.08 + Math.random() * 0.18,
-      }));
-      near = Array.from({ length: 7 }, () => {
-        const particle: NearParticle = { x: 0, y: 0, velocityX: 0, velocityY: 0, size: 0, alpha: 0, life: 0, maxLife: 1 };
-        resetNearParticle(particle, true);
-        return particle;
-      });
-    };
-
-    const resize = () => {
-      const bounds = canvas.getBoundingClientRect();
-      width = Math.max(1, bounds.width);
-      height = Math.max(1, bounds.height);
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
-      canvas.width = Math.round(width * pixelRatio);
-      canvas.height = Math.round(height * pixelRatio);
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      createParticles();
-    };
-
-    const draw = (time: number) => {
-      if (motionQuery.matches) {
-        context.clearRect(0, 0, width, height);
-        return;
-      }
-
-      const delta = Math.min((time - previousTime) / 1000, 0.04);
-      previousTime = time;
-      context.clearRect(0, 0, width, height);
-      context.lineCap = 'round';
-
-      for (const particle of wind) {
-        particle.x += particle.speed * delta;
-        particle.y += particle.drift * delta;
-        if (particle.x > width + particle.length || particle.y < -12 || particle.y > height + 12) {
-          particle.x = -particle.length - Math.random() * width * 0.08;
-          particle.y = Math.random() * height;
-        }
-        const fade = 0.42 + Math.sin(time * 0.0007 + particle.y) * 0.14;
-        context.strokeStyle = `rgba(218, 167, 125, ${particle.alpha * fade})`;
-        context.lineWidth = particle.size;
-        context.beginPath();
-        context.moveTo(particle.x, particle.y);
-        context.lineTo(particle.x - particle.length, particle.y - particle.drift * 0.025);
-        context.stroke();
-      }
-
-      const centreX = width * 0.5;
-      const centreY = height * 0.48;
-      for (const particle of visor) {
-        particle.depth += particle.speed * delta;
-        if (particle.depth > 1) {
-          particle.depth = 0.03;
-          particle.angle = Math.random() * Math.PI * 2;
-          particle.distance = 12 + Math.random() * Math.min(width, height) * 0.34;
-        }
-        const expansion = 0.55 + particle.depth * particle.depth * 3.2;
-        const x = centreX + Math.cos(particle.angle) * particle.distance * expansion;
-        const y = centreY + Math.sin(particle.angle) * particle.distance * expansion * 0.72;
-        const radius = particle.size * (0.4 + particle.depth * 2.7);
-        context.fillStyle = `rgba(238, 190, 148, ${particle.alpha * particle.depth})`;
-        context.beginPath();
-        context.arc(x, y, radius, 0, Math.PI * 2);
-        context.fill();
-      }
-
-      for (const particle of near) {
-        particle.life += delta;
-        particle.x += particle.velocityX * delta;
-        particle.y += particle.velocityY * delta;
-        if (particle.life > particle.maxLife || particle.x < -100 || particle.x > width + 100) resetNearParticle(particle);
-        const lifeProgress = particle.life / particle.maxLife;
-        const opacity = Math.sin(Math.min(1, lifeProgress) * Math.PI) * particle.alpha;
-        const gradient = context.createRadialGradient(particle.x, particle.y, 0, particle.x, particle.y, particle.size * 1.8);
-        gradient.addColorStop(0, `rgba(238, 196, 157, ${opacity})`);
-        gradient.addColorStop(0.42, `rgba(174, 116, 80, ${opacity * 0.48})`);
-        gradient.addColorStop(1, 'rgba(120, 78, 56, 0)');
-        context.fillStyle = gradient;
-        context.beginPath();
-        context.ellipse(particle.x, particle.y, particle.size * 1.8, particle.size, particle.velocityY * 0.015, 0, Math.PI * 2);
-        context.fill();
-      }
-
-      animationFrame = window.requestAnimationFrame(draw);
-    };
-
-    const restart = () => {
-      window.cancelAnimationFrame(animationFrame);
-      previousTime = performance.now();
-      if (!motionQuery.matches && !document.hidden) animationFrame = window.requestAnimationFrame(draw);
-      else context.clearRect(0, 0, width, height);
-    };
-    const observer = new ResizeObserver(resize);
-    observer.observe(canvas);
-    resize();
-    restart();
-    motionQuery.addEventListener('change', restart);
-    document.addEventListener('visibilitychange', restart);
-
-    return () => {
-      observer.disconnect();
-      motionQuery.removeEventListener('change', restart);
-      document.removeEventListener('visibilitychange', restart);
-      window.cancelAnimationFrame(animationFrame);
-    };
-  }, []);
-
   return (
     <div className="dreamer-panorama" aria-hidden="true">
       <Canvas
@@ -315,11 +285,11 @@ function DreamerPanorama({ onReady, onTelemetry }: { onReady: () => void; onTele
       >
         <color attach="background" args={['#8a4f37']} />
         <Suspense fallback={null}><DreamerPanoramaTexture onReady={onReady} /></Suspense>
+        <DreamerDustField />
         <DreamerLookController onTelemetry={onTelemetry} />
       </Canvas>
       <div className="dreamer-distance-haze" />
       <div className="dreamer-dust-haze" />
-      <canvas ref={dustCanvas} className="dreamer-dust" />
       <div className="dreamer-edge-depth" />
       <div className="dreamer-visor-optics" />
     </div>
