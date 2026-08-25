@@ -229,7 +229,7 @@ button:disabled { cursor:wait; opacity:.48; }
 
 /* Dreamer visor: a deep, layered EVA helmet inspired by the supplied cockpit reference. */
 .dreamer-view { --dream:#f6d8bd; --dream-dim:rgba(246,216,189,.58); }
-.dreamer-view canvas { filter:saturate(.72) contrast(1.07) brightness(.9); }
+.dreamer-view canvas { filter:saturate(.76) contrast(1.05) brightness(.98); }
 .dreamer-view::before { z-index:2; background:radial-gradient(ellipse at 50% 47%,transparent 42%,rgba(34,12,5,.08) 68%,rgba(2,2,2,.62) 100%),linear-gradient(180deg,rgba(255,188,126,.09),transparent 36%,transparent 72%,rgba(18,4,1,.24)); mix-blend-mode:normal; }
 .dreamer-view::after { content:""; position:absolute; z-index:3; inset:0; pointer-events:none; opacity:.13; background:repeating-linear-gradient(180deg,rgba(255,231,204,.08) 0 1px,transparent 1px 3px); mix-blend-mode:soft-light; }
 

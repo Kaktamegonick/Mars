@@ -26,9 +26,9 @@ function DreamerTerrain({ point, onReady }: { point: MarsPoint; onReady: () => v
   const centerU = (point.longitude + 180) / 360;
   const centerVTexture = (point.latitude + 90) / 180;
   const centerVImage = (90 - point.latitude) / 180;
-  const patchSpan = 0.115;
+  const patchSpan = 0.16;
 
-  const { geometry, color } = useMemo(() => {
+  const { geometry, color, detail, rocks, rockGeometry, rockMaterials } = useMemo(() => {
     const texture = loadedColor.clone();
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = THREE.RepeatWrapping;
@@ -45,38 +45,113 @@ function DreamerTerrain({ point, onReady }: { point: MarsPoint; onReady: () => v
     const context = canvas.getContext('2d', { willReadFrequently: true });
     context?.drawImage(image, 0, 0, canvas.width, canvas.height);
     const pixels = context?.getImageData(0, 0, canvas.width, canvas.height).data;
-    const terrain = new THREE.PlaneGeometry(240, 240, 144, 144);
+
+    const detailCanvas = document.createElement('canvas');
+    detailCanvas.width = 256;
+    detailCanvas.height = 256;
+    const detailContext = detailCanvas.getContext('2d');
+    const detailPixels = detailContext?.createImageData(detailCanvas.width, detailCanvas.height);
+    const seed = point.latitude * 17.13 + point.longitude * 31.71;
+    if (detailPixels && detailContext) {
+      for (let index = 0; index < detailPixels.data.length; index += 4) {
+        const grain = 76 + Math.floor(pseudoRandom(index * 0.73 + seed) * 118);
+        detailPixels.data[index] = grain;
+        detailPixels.data[index + 1] = grain;
+        detailPixels.data[index + 2] = grain;
+        detailPixels.data[index + 3] = 255;
+      }
+      detailContext.putImageData(detailPixels, 0, 0);
+    }
+    const detailTexture = new THREE.CanvasTexture(detailCanvas);
+    detailTexture.wrapS = THREE.RepeatWrapping;
+    detailTexture.wrapT = THREE.RepeatWrapping;
+    detailTexture.repeat.set(28, 28);
+
+    const terrain = new THREE.PlaneGeometry(340, 340, 196, 196);
     terrain.rotateX(-Math.PI / 2);
     const positions = terrain.getAttribute('position') as THREE.BufferAttribute;
     const centerHeight = pixels ? samplePixel(pixels, canvas.width, canvas.height, centerU, centerVImage) : 128;
-    const seed = point.latitude * 17.13 + point.longitude * 31.71;
+    const craters = Array.from({ length: 14 }, (_, index) => ({
+      x: (pseudoRandom(index * 4.11 + seed) - 0.5) * 250,
+      z: -18 - pseudoRandom(index * 7.23 - seed) * 132,
+      radius: 3 + pseudoRandom(index * 9.37 + seed) * 8,
+      depth: 0.35 + pseudoRandom(index * 2.81 - seed) * 1.15,
+    }));
+
+    const terrainHeightAt = (x: number, z: number) => {
+      const u = centerU + (x / 340) * patchSpan;
+      const v = centerVImage - (z / 340) * patchSpan;
+      const sourceHeight = pixels ? samplePixel(pixels, canvas.width, canvas.height, u, v) : centerHeight;
+      const sourceRelief = ((sourceHeight - centerHeight) / 255) * 12;
+      const forward = -z;
+      const fineRelief = Math.sin(x * 0.17 + seed) * 0.28
+        + Math.cos(z * 0.14 - seed) * 0.24
+        + Math.sin((x + z) * 0.33 + seed * 0.4) * 0.11;
+      const erodedBands = Math.sin(x * 0.038 + seed) * Math.cos(z * 0.026 - seed) * 1.05;
+      const eastRamp = THREE.MathUtils.smoothstep(x, 27, 118);
+      const eastWall = Math.pow(eastRamp, 1.55) * THREE.MathUtils.smoothstep(forward, -18, 62)
+        * (18 + Math.abs(Math.sin(z * 0.037 + seed)) * 11 + Math.abs(Math.sin(x * 0.082 - z * 0.014)) * 6);
+      const westRamp = THREE.MathUtils.smoothstep(-x, 55, 148);
+      const westWall = westRamp * THREE.MathUtils.smoothstep(forward, -8, 78)
+        * (8 + Math.abs(Math.sin(z * 0.044 - seed)) * 6);
+      const distantRidge = THREE.MathUtils.smoothstep(forward, 88, 162)
+        * (2 + Math.abs(Math.sin(x * 0.029 + seed)) * 3.5);
+      let craterRelief = 0;
+      for (const crater of craters) {
+        const distance = Math.hypot(x - crater.x, z - crater.z);
+        const normalized = distance / crater.radius;
+        if (normalized < 1) craterRelief -= (1 - normalized * normalized) * crater.depth;
+        else if (normalized < 1.32) craterRelief += Math.sin(((normalized - 1) / 0.32) * Math.PI) * crater.depth * 0.28;
+      }
+      const cameraClearance = THREE.MathUtils.smoothstep(Math.hypot(x, z - 9), 3, 19);
+      return (sourceRelief + fineRelief + erodedBands + eastWall + westWall + distantRidge + craterRelief) * cameraClearance;
+    };
 
     for (let index = 0; index < positions.count; index += 1) {
       const x = positions.getX(index);
       const z = positions.getZ(index);
-      const u = centerU + (x / 240) * patchSpan;
-      const v = centerVImage - (z / 240) * patchSpan;
-      const sourceHeight = pixels ? samplePixel(pixels, canvas.width, canvas.height, u, v) : centerHeight;
-      const localRelief = ((sourceHeight - centerHeight) / 255) * 22;
-      const fineRelief = Math.sin(x * 0.12 + seed) * 0.34 + Math.cos(z * 0.095 - seed) * 0.28;
-      const distance = Math.hypot(x, z);
-      const cameraClearance = THREE.MathUtils.smoothstep(distance, 0, 18);
-      positions.setY(index, (localRelief + fineRelief) * cameraClearance);
+      positions.setY(index, terrainHeightAt(x, z));
     }
     positions.needsUpdate = true;
     terrain.computeVertexNormals();
-    return { geometry: terrain, color: texture };
-  }, [centerU, centerVImage, centerVTexture, elevation.image, loadedColor, patchSpan, point.latitude, point.longitude]);
 
-  const rocks = useMemo(() => Array.from({ length: 42 }, (_, index) => {
-    const angle = pseudoRandom(index + point.latitude * 9.7) * Math.PI * 2;
-    const radius = 12 + pseudoRandom(index * 2.7 + point.longitude) * 86;
+    const scatteredRocks = Array.from({ length: 118 }, (_, index) => {
+      const z = 4 - Math.pow(pseudoRandom(index * 5.17 + seed), 0.72) * 152;
+      const spread = 38 + Math.max(0, -z) * 0.72;
+      let x = (pseudoRandom(index * 8.31 - seed) - 0.5) * spread * 2;
+      if (Math.hypot(x, z - 9) < 9) x += x > 0 ? 10 : -10;
+      let scale = 0.2 + Math.pow(pseudoRandom(index * 3.43 + seed), 2.1) * 1.55;
+      if (z > -60 && Math.abs(x) < 38) scale = Math.min(scale, 0.38);
+      return {
+        position: [x, terrainHeightAt(x, z) + scale * 0.36, z] as [number, number, number],
+        rotation: [pseudoRandom(index + 4) * 0.5, pseudoRandom(index + 9) * Math.PI, pseudoRandom(index + 12) * 0.5] as [number, number, number],
+        scale: [scale * (1.1 + pseudoRandom(index * 1.7) * 0.65), scale * (0.52 + pseudoRandom(index * 2.1) * 0.38), scale] as [number, number, number],
+        material: index % 3,
+      };
+    });
+    const cliffOutcrops = Array.from({ length: 42 }, (_, index) => {
+      const z = -28 - pseudoRandom(index * 6.37 + seed) * 128;
+      const x = 52 + pseudoRandom(index * 3.91 - seed) * 76;
+      const scale = 1.35 + pseudoRandom(index * 8.13 + seed) * 3.9;
+      return {
+        position: [x, terrainHeightAt(x, z) + scale * 0.12, z] as [number, number, number],
+        rotation: [pseudoRandom(index + 17) * 0.35, pseudoRandom(index + 23) * Math.PI, pseudoRandom(index + 29) * 0.35] as [number, number, number],
+        scale: [scale * 1.5, scale * 0.86, scale] as [number, number, number],
+        material: (index + 1) % 3,
+      };
+    });
+    const surfaceRocks = [...scatteredRocks, ...cliffOutcrops];
+    const sharedRockGeometry = new THREE.DodecahedronGeometry(1, 1);
+    const sharedRockMaterials = ['#814229', '#a05b38', '#653221'].map((rockColor) => new THREE.MeshStandardMaterial({ color: rockColor, roughness: 1, flatShading: true }));
     return {
-      position: [Math.cos(angle) * radius, 0.08, Math.sin(angle) * radius] as [number, number, number],
-      rotation: [pseudoRandom(index + 4), pseudoRandom(index + 9) * Math.PI, pseudoRandom(index + 12)] as [number, number, number],
-      scale: 0.18 + pseudoRandom(index * 4.1) * 0.78,
+      geometry: terrain,
+      color: texture,
+      detail: detailTexture,
+      rocks: surfaceRocks,
+      rockGeometry: sharedRockGeometry,
+      rockMaterials: sharedRockMaterials,
     };
-  }), [point.latitude, point.longitude]);
+  }, [centerU, centerVImage, centerVTexture, elevation.image, loadedColor, patchSpan, point.latitude, point.longitude]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(onReady);
@@ -86,18 +161,18 @@ function DreamerTerrain({ point, onReady }: { point: MarsPoint; onReady: () => v
   useEffect(() => () => {
     geometry.dispose();
     color.dispose();
-  }, [color, geometry]);
+    detail.dispose();
+    rockGeometry.dispose();
+    rockMaterials.forEach((material) => material.dispose());
+  }, [color, detail, geometry, rockGeometry, rockMaterials]);
 
   return (
     <group>
-      <mesh geometry={geometry} receiveShadow>
-        <meshStandardMaterial map={color} color="#b86c43" roughness={1} metalness={0} />
+      <mesh geometry={geometry}>
+        <meshStandardMaterial map={color} bumpMap={detail} bumpScale={0.7} color="#b97d5b" roughness={1} metalness={0} />
       </mesh>
       {rocks.map((rock, index) => (
-        <mesh key={index} position={rock.position} rotation={rock.rotation} scale={rock.scale} castShadow>
-          <dodecahedronGeometry args={[1, 0]} />
-          <meshStandardMaterial color={index % 3 === 0 ? '#713a25' : '#985436'} roughness={1} />
-        </mesh>
+        <mesh key={index} geometry={rockGeometry} material={rockMaterials[rock.material]} position={rock.position} rotation={rock.rotation} scale={rock.scale} />
       ))}
     </group>
   );
@@ -106,11 +181,11 @@ function DreamerTerrain({ point, onReady }: { point: MarsPoint; onReady: () => v
 function DreamerDust() {
   const points = useRef<THREE.Points>(null);
   const geometry = useMemo(() => {
-    const positions = new Float32Array(900 * 3);
-    for (let index = 0; index < 900; index += 1) {
-      positions[index * 3] = (pseudoRandom(index * 2.1) - 0.5) * 140;
-      positions[index * 3 + 1] = pseudoRandom(index * 4.7) * 24;
-      positions[index * 3 + 2] = (pseudoRandom(index * 7.3) - 0.5) * 140;
+    const positions = new Float32Array(520 * 3);
+    for (let index = 0; index < 520; index += 1) {
+      positions[index * 3] = (pseudoRandom(index * 2.1) - 0.5) * 180;
+      positions[index * 3 + 1] = 0.2 + Math.pow(pseudoRandom(index * 4.7), 2.4) * 6;
+      positions[index * 3 + 2] = (pseudoRandom(index * 7.3) - 0.5) * 180;
     }
     const result = new THREE.BufferGeometry();
     result.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -124,7 +199,7 @@ function DreamerDust() {
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
     <points ref={points} geometry={geometry}>
-      <pointsMaterial color="#f0a06f" size={0.045} transparent opacity={0.38} sizeAttenuation depthWrite={false} />
+      <pointsMaterial color="#efad7d" size={0.032} transparent opacity={0.2} sizeAttenuation depthWrite={false} />
     </points>
   );
 }
@@ -134,9 +209,9 @@ function MartianSky() {
     side: THREE.BackSide,
     depthWrite: false,
     uniforms: {
-      horizonColor: { value: new THREE.Color('#c76b43') },
-      zenithColor: { value: new THREE.Color('#160d0b') },
-      sunColor: { value: new THREE.Color('#ffe1bd') },
+      horizonColor: { value: new THREE.Color('#e39a67') },
+      zenithColor: { value: new THREE.Color('#9d5134') },
+      sunColor: { value: new THREE.Color('#ffe8c8') },
     },
     vertexShader: `
       varying vec3 vDirection;
@@ -151,13 +226,11 @@ function MartianSky() {
       uniform vec3 zenithColor;
       uniform vec3 sunColor;
       void main() {
-        float height = clamp(vDirection.y * 0.72 + 0.3, 0.0, 1.0);
-        float gradient = smoothstep(0.02, 0.82, height);
+        float height = clamp(vDirection.y * 0.78 + 0.24, 0.0, 1.0);
+        float gradient = smoothstep(0.04, 0.88, height);
         vec3 color = mix(horizonColor, zenithColor, gradient);
-        vec3 sunDirection = normalize(vec3(-0.58, 0.24, -0.78));
-        float sun = pow(max(dot(vDirection, sunDirection), 0.0), 620.0);
-        float halo = pow(max(dot(vDirection, sunDirection), 0.0), 18.0) * 0.2;
-        color += sunColor * (sun * 1.8 + halo);
+        float horizonHaze = pow(1.0 - max(vDirection.y, 0.0), 4.0) * 0.1;
+        color += sunColor * horizonHaze;
         gl_FragColor = vec4(color, 1.0);
       }
     `,
@@ -168,6 +241,35 @@ function MartianSky() {
       <sphereGeometry args={[1, 48, 28]} />
     </mesh>
   );
+}
+
+function MartianSun() {
+  const { texture, material } = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const context = canvas.getContext('2d');
+    if (context) {
+      const glow = context.createRadialGradient(128, 128, 0, 128, 128, 128);
+      glow.addColorStop(0, 'rgba(255, 250, 224, 1)');
+      glow.addColorStop(0.08, 'rgba(255, 244, 211, 1)');
+      glow.addColorStop(0.13, 'rgba(255, 216, 166, .72)');
+      glow.addColorStop(0.34, 'rgba(255, 174, 111, .18)');
+      glow.addColorStop(1, 'rgba(255, 153, 92, 0)');
+      context.fillStyle = glow;
+      context.fillRect(0, 0, 256, 256);
+    }
+    const sunTexture = new THREE.CanvasTexture(canvas);
+    const sunMaterial = new THREE.SpriteMaterial({ map: sunTexture, transparent: true, depthWrite: false, depthTest: false, toneMapped: false });
+    return { texture: sunTexture, material: sunMaterial };
+  }, []);
+
+  useEffect(() => () => {
+    texture.dispose();
+    material.dispose();
+  }, [material, texture]);
+
+  return <sprite position={[-24, 26, -180]} scale={[34, 34, 1]} material={material} renderOrder={-4} />;
 }
 
 function DreamerLookController({ onTelemetry }: { onTelemetry: (telemetry: LookTelemetry) => void }) {
@@ -271,11 +373,12 @@ function DreamerLookController({ onTelemetry }: { onTelemetry: (telemetry: LookT
 function DreamerScene({ point, onReady, onTelemetry }: { point: MarsPoint; onReady: () => void; onTelemetry: (telemetry: LookTelemetry) => void }) {
   return (
     <>
-      <color attach="background" args={['#160d0b']} />
-      <fog attach="fog" args={['#9e5133', 48, 158]} />
+      <color attach="background" args={['#9d5134']} />
+      <fog attach="fog" args={['#c4774e', 72, 245]} />
       <MartianSky />
-      <hemisphereLight args={['#ffd0b2', '#24100b', 1.35]} />
-      <directionalLight position={[-32, 42, 18]} intensity={3.15} color="#ffd8b9" />
+      <MartianSun />
+      <hemisphereLight args={['#ffd4ae', '#28100a', 1.42]} />
+      <directionalLight position={[-18, 30, -58]} intensity={2.7} color="#ffd6ad" />
       <Suspense fallback={null}><DreamerTerrain point={point} onReady={onReady} /></Suspense>
       <DreamerDust />
       <DreamerLookController onTelemetry={onTelemetry} />
