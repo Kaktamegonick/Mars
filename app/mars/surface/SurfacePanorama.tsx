@@ -158,12 +158,15 @@ function RoverPanorama({ station, onReady }: { station: RoverStation; onReady: (
   const verticalOffset = -((1 - horizon) - 0.5) * cylinderHeight;
   const skyExtensionHeight = cylinderHeight * 2;
   const skyExtensionOffset = verticalOffset + cylinderHeight / 2 + skyExtensionHeight / 2;
+  const extendSky = station.id !== 'curiosity';
   return (
     <group rotation={[0, Math.PI / 2, 0]}>
-      <mesh position={[0, skyExtensionOffset, 0]}>
-        <cylinderGeometry args={[10.04, 10.04, skyExtensionHeight, 160, 1, true]} />
-        <meshBasicMaterial map={skyExtensionTexture} side={THREE.BackSide} toneMapped={false} />
-      </mesh>
+      {extendSky && (
+        <mesh position={[0, skyExtensionOffset, 0]}>
+          <cylinderGeometry args={[10.04, 10.04, skyExtensionHeight, 160, 1, true]} />
+          <meshBasicMaterial map={skyExtensionTexture} side={THREE.BackSide} toneMapped={false} />
+        </mesh>
+      )}
       <mesh position={[0, verticalOffset, 0]}>
         <cylinderGeometry args={[10, 10, cylinderHeight, 160, 1, true]} />
         <meshBasicMaterial map={texture} side={THREE.BackSide} toneMapped={false} />
