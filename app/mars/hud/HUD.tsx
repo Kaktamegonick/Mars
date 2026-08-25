@@ -34,7 +34,7 @@ export function HUD() {
   return (
     <>
       <header className="topbar">
-        <div className="wordmark"><span className="mission-mark">M</span><div><b>MARS</b><small>EXPLORER / MISSION 01</small></div></div>
+        <div className="wordmark"><div><b>MARS</b><small>EXPLORER / MISSION 01</small></div></div>
         <div className="top-actions">
           <button className="route-button" disabled={Boolean(flight)} onClick={viewPerseveranceRoute}>↗ PERSEVERANCE PATH</button>
           <button className="surface-button" disabled={Boolean(flight)} onClick={() => visitStation(activeStationId)}>↓ DESCEND · {activeStation.rover.toUpperCase()}</button>
