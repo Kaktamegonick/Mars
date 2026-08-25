@@ -343,57 +343,63 @@ export function DreamerSurface() {
         <DreamerScene point={point} onReady={markReady} onTelemetry={updateTelemetry} />
       </Canvas>
 
-      <div className="dreamer-helmet" aria-hidden="true"><i /><b /><span /><em /></div>
+      <div className="dreamer-helmet" aria-hidden="true">
+        <div className="helmet-crown" />
+        <div className="helmet-side helmet-side-left" />
+        <div className="helmet-side helmet-side-right" />
+        <div className="helmet-chin"><i /><b /></div>
+        <div className="helmet-seal helmet-seal-outer" />
+        <div className="helmet-seal helmet-seal-inner" />
+        <i className="helmet-bolt helmet-bolt-left" />
+        <i className="helmet-bolt helmet-bolt-right" />
+      </div>
       <div className="dreamer-glass" aria-hidden="true"><i /><b /><span /></div>
       <button className="dreamer-reveal" onClick={() => setUiHidden(false)}>RAISE HUD</button>
+      <button className="dreamer-exit" onClick={exitDreamerView}>EXIT TO ORBIT ↑</button>
 
       <div className="dreamer-hud" style={hudMotion}>
-        <header className="dreamer-topline">
-          <div><strong>DREAMER</strong><span>EXTRAVEHICULAR SIMULATION</span></div>
-          <p><i /> VISOR LINK · NOMINAL</p>
-          <button onClick={exitDreamerView}>EXIT TO ORBIT ↑</button>
-        </header>
-
-        <div className="dreamer-compass" aria-label={`Heading ${heading} degrees`}>
-          <small>W</small><i /><small>NW</small><i /><b>{heading}°</b><i /><small>NE</small><i /><small>E</small>
+        <div className="dreamer-bearing" aria-label={`Heading ${heading} degrees`}>
+          <div className="dreamer-bearing-scale"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
+          <b>{heading}°</b>
+          <span>MISSION DAY 01</span>
         </div>
 
-        <aside className="dreamer-panel dreamer-suit">
-          <p>SUIT / EVA 01</p>
-          <h2>Life support</h2>
-          <dl>
-            <div><dt>OXYGEN</dt><dd>98<span>%</span></dd></div>
-            <div><dt>PRESSURE</dt><dd>4.3<span>PSI</span></dd></div>
-            <div><dt>HEART RATE</dt><dd>72<span>BPM</span></dd></div>
-            <div><dt>SUIT POWER</dt><dd>87<span>%</span></dd></div>
-          </dl>
-          <div className="dreamer-gauge"><i style={{ width: '87%' }} /></div>
-          <small>EST. EVA TIME · 06:42:18</small>
+        <aside className="dreamer-readout dreamer-environment">
+          <p>SOL 01</p>
+          <b>TIME {localTime}</b>
+          <hr />
+          <span>ENVIRONMENT</span>
+          <strong>19.4°C&nbsp;&nbsp;|&nbsp;&nbsp;14%&nbsp;&nbsp;|&nbsp;&nbsp;6.1 m/s</strong>
         </aside>
 
-        <aside className="dreamer-panel dreamer-location">
-          <p>NAV / SELECTED POINT</p>
-          <h2>Uncharted surface</h2>
-          <dl>
-            <div><dt>LAT</dt><dd>{formatLatitude(point.latitude)}</dd></div>
-            <div><dt>LON</dt><dd>{formatLongitude(point.longitude)}</dd></div>
-            <div><dt>ELEV</dt><dd>{formatElevation(point.elevation)}</dd></div>
-            <div><dt>LOCAL</dt><dd>{localTime} MTC</dd></div>
-          </dl>
-          <div className="dreamer-sim-label"><i /> SIMULATED TERRAIN INTERPRETATION</div>
+        <aside className="dreamer-readout dreamer-navigation">
+          <p>LOCATION</p>
+          <strong>{formatLatitude(point.latitude)}&nbsp;&nbsp;&nbsp;{formatLongitude(point.longitude)}</strong>
+          <hr />
+          <span>ELEVATION</span>
+          <b>{formatElevation(point.elevation)}</b>
+        </aside>
+
+        <aside className="dreamer-pressure">
+          <span>SUIT PRESSURE</span>
+          <b>101.3 <small>kPa</small></b>
+          <div><i /><i /><i /><i /></div>
+        </aside>
+
+        <aside className="dreamer-systems">
+          <p>SUIT SYSTEMS</p>
+          <div><span>OXYGEN</span><i><b style={{ width: '98%' }} /></i><small>98%</small></div>
+          <div><span>ECG</span><i><b style={{ width: '92%' }} /></i><small>92%</small></div>
+          <div><span>POWER</span><i><b style={{ width: '92%' }} /></i><small>92%</small></div>
+          <div><span>O₂</span><i><b style={{ width: '87%' }} /></i><small>87%</small></div>
+          <div><span>HYDRATION</span><i><b style={{ width: '81%' }} /></i><small>81%</small></div>
         </aside>
 
         <div className="dreamer-reticle" aria-hidden="true"><span /><i /><b /></div>
 
-        <div className="dreamer-attitude">
-          <span>PITCH {telemetry.pitch >= 0 ? '+' : ''}{telemetry.pitch.toFixed(1)}°</span>
-          <i />
-          <span>FOV {Math.round(telemetry.fov)}°</span>
-        </div>
-
         <footer className="dreamer-footer">
-          <span>DRAG / SWIPE · LOOK</span><span>SCROLL / PINCH · VISOR ZOOM</span><span>H · HUD</span><span>F · {fullscreen ? 'WINDOW' : 'FULLSCREEN'}</span>
-          <b>IMAGINED VIEW · NOT A ROVER PHOTOGRAPH</b>
+          <span>DRAG / SWIPE · LOOK</span><span>SCROLL / PINCH · ZOOM</span><span>H · HUD</span><span>F · {fullscreen ? 'WINDOW' : 'FULLSCREEN'}</span>
+          <b>SIMULATED VIEW · NOT A ROVER PHOTOGRAPH</b>
         </footer>
       </div>
 
