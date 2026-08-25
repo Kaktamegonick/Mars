@@ -70,12 +70,17 @@ function StationMarker({ station, active, onVisit }: { station: RoverStation; ac
 
 export function RoverStations() {
   const activeStationId = useMarsStore((state) => state.activeStationId);
+  const selected = useMarsStore((state) => state.selected);
   const visitStation = useMarsStore((state) => state.visitStation);
 
   return (
     <group>
       {ROVER_STATIONS.map((station) => {
-        const active = station.id === activeStationId;
+        const position = stationPosition(station);
+        const isSelectedStation = selected
+          ? selected.position.distanceToSquared(position) < 0.000001
+          : false;
+        const active = station.id === activeStationId && isSelectedStation;
         return (
           <StationMarker
             key={station.id}
