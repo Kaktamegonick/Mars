@@ -111,23 +111,29 @@ function SurfaceLookController({ command, station }: { command: ViewCommand; sta
 function RoverPanorama({ station, onReady }: { station: RoverStation; onReady: () => void }) {
   const loadedTexture = useLoader(THREE.TextureLoader, station.image!);
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy());
+  const verticalExtension = 3;
   const texture = useMemo(() => {
     const panoramaTexture = loadedTexture.clone();
     panoramaTexture.colorSpace = THREE.SRGBColorSpace;
     panoramaTexture.wrapS = THREE.RepeatWrapping;
+    panoramaTexture.wrapT = THREE.ClampToEdgeWrapping;
     panoramaTexture.repeat.x = -1;
     panoramaTexture.offset.x = 1;
     if (station.panoramaView) {
       const { cropTop, cropBottom } = station.panoramaView;
-      panoramaTexture.repeat.y = 1 - cropTop - cropBottom;
-      panoramaTexture.offset.y = cropBottom;
+      const usableHeight = 1 - cropTop - cropBottom;
+      panoramaTexture.repeat.y = usableHeight * verticalExtension;
+      panoramaTexture.offset.y = cropBottom - usableHeight;
+    } else {
+      panoramaTexture.repeat.y = verticalExtension;
+      panoramaTexture.offset.y = -(verticalExtension - 1) / 2;
     }
     panoramaTexture.anisotropy = Math.min(8, maxAnisotropy);
     panoramaTexture.minFilter = THREE.LinearMipmapLinearFilter;
     panoramaTexture.magFilter = THREE.LinearFilter;
     panoramaTexture.needsUpdate = true;
     return panoramaTexture;
-  }, [loadedTexture, maxAnisotropy, station.panoramaView]);
+  }, [loadedTexture, maxAnisotropy, station.panoramaView, verticalExtension]);
   useEffect(() => () => texture.dispose(), [texture]);
   useEffect(() => {
     const frame = requestAnimationFrame(onReady);
@@ -137,9 +143,10 @@ function RoverPanorama({ station, onReady }: { station: RoverStation; onReady: (
     ? 1 - station.panoramaView.cropTop - station.panoramaView.cropBottom
     : 1;
   const usableAspect = station.imageAspect / usableHeight;
-  const cylinderHeight = (Math.PI * 20) / usableAspect;
+  const sourceCylinderHeight = (Math.PI * 20) / usableAspect;
+  const cylinderHeight = sourceCylinderHeight * verticalExtension;
   const horizon = station.panoramaView?.horizon ?? 0.5;
-  const verticalOffset = -((1 - horizon) - 0.5) * cylinderHeight;
+  const verticalOffset = -((1 - horizon) - 0.5) * sourceCylinderHeight;
   return (
     <mesh position={[0, verticalOffset, 0]} rotation={[0, Math.PI / 2, 0]}>
       <cylinderGeometry args={[10, 10, cylinderHeight, 160, 1, true]} />
