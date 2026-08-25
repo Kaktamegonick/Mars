@@ -111,24 +111,40 @@ function SurfaceLookController({ command, station }: { command: ViewCommand; sta
 function RoverPanorama({ station, onReady }: { station: RoverStation; onReady: () => void }) {
   const loadedTexture = useLoader(THREE.TextureLoader, station.image!);
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy());
-  const texture = useMemo(() => {
+  const { texture, skyExtensionTexture } = useMemo(() => {
     const panoramaTexture = loadedTexture.clone();
+    const extensionTexture = loadedTexture.clone();
+    const cropTop = station.panoramaView?.cropTop ?? 0;
+    const cropBottom = station.panoramaView?.cropBottom ?? 0;
+    const usableHeight = 1 - cropTop - cropBottom;
+
     panoramaTexture.colorSpace = THREE.SRGBColorSpace;
     panoramaTexture.wrapS = THREE.RepeatWrapping;
     panoramaTexture.repeat.x = -1;
     panoramaTexture.offset.x = 1;
-    if (station.panoramaView) {
-      const { cropTop, cropBottom } = station.panoramaView;
-      panoramaTexture.repeat.y = 1 - cropTop - cropBottom;
-      panoramaTexture.offset.y = cropBottom;
-    }
+    panoramaTexture.repeat.y = usableHeight;
+    panoramaTexture.offset.y = cropBottom;
     panoramaTexture.anisotropy = Math.min(8, maxAnisotropy);
     panoramaTexture.minFilter = THREE.LinearMipmapLinearFilter;
     panoramaTexture.magFilter = THREE.LinearFilter;
     panoramaTexture.needsUpdate = true;
-    return panoramaTexture;
+
+    extensionTexture.colorSpace = THREE.SRGBColorSpace;
+    extensionTexture.wrapS = THREE.RepeatWrapping;
+    extensionTexture.wrapT = THREE.ClampToEdgeWrapping;
+    extensionTexture.repeat.set(-1, 0);
+    extensionTexture.offset.set(1, Math.max(0, 1 - cropTop - 0.002));
+    extensionTexture.anisotropy = Math.min(8, maxAnisotropy);
+    extensionTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    extensionTexture.magFilter = THREE.LinearFilter;
+    extensionTexture.needsUpdate = true;
+
+    return { texture: panoramaTexture, skyExtensionTexture: extensionTexture };
   }, [loadedTexture, maxAnisotropy, station.panoramaView]);
-  useEffect(() => () => texture.dispose(), [texture]);
+  useEffect(() => () => {
+    texture.dispose();
+    skyExtensionTexture.dispose();
+  }, [skyExtensionTexture, texture]);
   useEffect(() => {
     const frame = requestAnimationFrame(onReady);
     return () => cancelAnimationFrame(frame);
@@ -140,11 +156,19 @@ function RoverPanorama({ station, onReady }: { station: RoverStation; onReady: (
   const cylinderHeight = (Math.PI * 20) / usableAspect;
   const horizon = station.panoramaView?.horizon ?? 0.5;
   const verticalOffset = -((1 - horizon) - 0.5) * cylinderHeight;
+  const skyExtensionHeight = cylinderHeight * 2;
+  const skyExtensionOffset = verticalOffset + cylinderHeight / 2 + skyExtensionHeight / 2;
   return (
-    <mesh position={[0, verticalOffset, 0]} rotation={[0, Math.PI / 2, 0]}>
-      <cylinderGeometry args={[10, 10, cylinderHeight, 160, 1, true]} />
-      <meshBasicMaterial map={texture} side={THREE.BackSide} toneMapped={false} />
-    </mesh>
+    <group rotation={[0, Math.PI / 2, 0]}>
+      <mesh position={[0, skyExtensionOffset, 0]}>
+        <cylinderGeometry args={[10.04, 10.04, skyExtensionHeight, 160, 1, true]} />
+        <meshBasicMaterial map={skyExtensionTexture} side={THREE.BackSide} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, verticalOffset, 0]}>
+        <cylinderGeometry args={[10, 10, cylinderHeight, 160, 1, true]} />
+        <meshBasicMaterial map={texture} side={THREE.BackSide} toneMapped={false} />
+      </mesh>
+    </group>
   );
 }
 
