@@ -9,10 +9,13 @@ import { HUD } from './hud/HUD';
 import { useMarsStore } from './stores/marsStore';
 import { SurfacePanorama } from './surface/SurfacePanorama';
 import { MroTrajectory } from './orbit/MroTrajectory';
+import { DreamerSurface } from './dreamer/DreamerSurface';
 
 export default function MarsExplorer() {
   const surfaceView = useMarsStore((state) => state.surfaceView);
+  const dreamerView = useMarsStore((state) => state.dreamerView);
   const activeStationId = useMarsStore((state) => state.activeStationId);
+  if (dreamerView) return <DreamerSurface />;
   if (surfaceView) return <SurfacePanorama key={activeStationId} />;
   return (
     <main className="explorer-shell">

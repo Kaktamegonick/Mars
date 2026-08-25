@@ -13,6 +13,7 @@ An interactive 3D journey from Mars orbit to verified rover-camera archives on t
 - View mission-identified imagery from Sojourner, Spirit, Opportunity, Curiosity, Perseverance, and Zhurong.
 - Follow the published Perseverance route between the included camera stations.
 - Inspect an accelerated reference model of Mars Reconnaissance Orbiter's near-polar orbit.
+- Arm Dreamer Mode, choose any point on Mars, and enter a clearly labeled spacesuit-view terrain simulation.
 - Use mouse, touch, keyboard, or fullscreen controls on desktop and mobile.
 
 The explorer deliberately does not substitute one rover's imagery for another. PrOP-M is shown as a historical landing site without a panorama because no rover-camera photograph was returned.
@@ -23,6 +24,7 @@ The explorer deliberately does not substitute one rover's imagery for another. P
 | --- | --- | --- |
 | Orbit | Drag to rotate, scroll or pinch to zoom, select a marker to visit it | Arrow keys rotate, `+` / `-` zoom |
 | Surface | Drag or swipe to look around, scroll or pinch to zoom | Arrow keys look, `+` / `-` zoom, `0` resets the view |
+| Dreamer | Enable Dreamer Mode in orbit, select any terrain point, then drag or swipe inside the visor | Arrow keys look, `+` / `-` zoom, `0` resets the view |
 | Anywhere | Use the on-screen interface to change locations or return to orbit | `H` hides the interface, `F` toggles fullscreen |
 
 ## Quick start

@@ -21,6 +21,8 @@ export function HUD() {
   const viewPerseveranceRoute = useMarsStore((state) => state.viewPerseveranceRoute);
   const activeStationId = useMarsStore((state) => state.activeStationId);
   const visitStation = useMarsStore((state) => state.visitStation);
+  const dreamerArmed = useMarsStore((state) => state.dreamerArmed);
+  const toggleDreamerMode = useMarsStore((state) => state.toggleDreamerMode);
   const activeStation = getRoverStation(activeStationId);
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export function HUD() {
       <header className="topbar">
         <div className="wordmark"><div><b>MARS</b><small>EXPLORER / MISSION 01</small></div></div>
         <div className="top-actions">
+          <button className={`dreamer-button${dreamerArmed ? ' active' : ''}`} disabled={Boolean(flight)} aria-pressed={dreamerArmed} onClick={toggleDreamerMode}>✦ DREAMER MODE</button>
           <button className="route-button" disabled={Boolean(flight)} onClick={viewPerseveranceRoute}>↗ PERSEVERANCE PATH</button>
           <button className="surface-button" disabled={Boolean(flight)} onClick={() => visitStation(activeStationId)}>↓ DESCEND · {activeStation.rover.toUpperCase()}</button>
           <button className="orbit-button" disabled={Boolean(flight)} onClick={orbitOut} aria-label="Center the full globe">◎ CENTER GLOBE</button>
@@ -43,9 +46,10 @@ export function HUD() {
         </div>
       </header>
 
-      {!routeOverview && <section className="hero-copy">
-        <p>ORBITAL CARTOGRAPHY / VERIFIED SURFACE ARCHIVE</p><h1>Touch the<br /><em>red planet.</em></h1>
-        <span>Drag to rotate · choose a rover · descend into an authentic camera view</span>
+      {!routeOverview && <section className={`hero-copy${dreamerArmed ? ' dreamer-copy' : ''}`}>
+        <p>{dreamerArmed ? 'DREAMER MODE / ANY POINT SIMULATION' : 'ORBITAL CARTOGRAPHY / VERIFIED SURFACE ARCHIVE'}</p>
+        <h1>{dreamerArmed ? <>Choose anywhere.<br /><em>Step outside.</em></> : <>Touch the<br /><em>red planet.</em></>}</h1>
+        <span>{dreamerArmed ? 'Rotate Mars · click any terrain point · descend inside the suit' : 'Drag to rotate · choose a rover · descend into an authentic camera view'}</span>
         <div className="mission-path"><b>01</b><span>EXPLORE ORBIT</span><i /><b>02</b><span>CHOOSE ROVER SITE</span></div>
       </section>}
 
@@ -128,8 +132,8 @@ export function HUD() {
         </div>
       )}
       <div className="scale"><span /> {altitude > 1_000_000 ? '1,000 KM' : altitude > 10_000 ? '10 KM' : altitude > 100 ? '100 M' : '10 M'}</div>
-      <div className="orbit-controls-hint">DRAG TO ROTATE · SCROLL / PINCH TO ZOOM · CENTER GLOBE TO RESET</div>
-      <div className="statusbar"><span>REGION: {routeOverview ? 'JEZERO DRIVE CORRIDOR' : selected ? 'SELECTED TERRAIN' : 'GLOBAL MARS'}</span><span>DESCENT: VERIFIED SITES ONLY</span><span>MODE: {routeOverview ? 'ROUTE OVERVIEW' : mode}</span><span>FPS: {fps}</span></div>
+      <div className="orbit-controls-hint">{dreamerArmed ? 'DREAMER ARMED · CLICK ANY POINT TO DESCEND' : 'DRAG TO ROTATE · SCROLL / PINCH TO ZOOM · CENTER GLOBE TO RESET'}</div>
+      <div className="statusbar"><span>REGION: {routeOverview ? 'JEZERO DRIVE CORRIDOR' : selected ? 'SELECTED TERRAIN' : 'GLOBAL MARS'}</span><span>DESCENT: {dreamerArmed ? 'SIMULATED ANYWHERE' : 'VERIFIED SITES ONLY'}</span><span>MODE: {dreamerArmed ? 'DREAMER TARGETING' : routeOverview ? 'ROUTE OVERVIEW' : mode}</span><span>FPS: {fps}</span></div>
     </>
   );
 }

@@ -24,6 +24,7 @@ type ActiveFlight = {
   rotation: THREE.Quaternion;
   quick: boolean;
   enterSurface: boolean;
+  enterDreamer: boolean;
   regionalOverview: boolean;
 };
 
@@ -38,6 +39,7 @@ export function MarsCameraController() {
   const routeOverview = useMarsStore((state) => state.routeOverview);
   const clearFlight = useMarsStore((state) => state.clearFlight);
   const enterSurfaceView = useMarsStore((state) => state.enterSurfaceView);
+  const enterDreamerView = useMarsStore((state) => state.enterDreamerView);
   const setTelemetry = useMarsStore((state) => state.setTelemetry);
 
   useEffect(() => {
@@ -48,10 +50,11 @@ export function MarsCameraController() {
     const angle = startDirection.angleTo(endDirection);
     const altitude = Math.max(3, (startPosition.length() - MARS_RADIUS) * METERS_PER_UNIT);
     const enterSurface = flight.enterSurface ?? false;
+    const enterDreamer = flight.enterDreamer ?? false;
     let finalAltitude = altitude > 500_000 ? 320_000 : altitude;
     if (flight.quick) finalAltitude = ORBITAL_DESCENT_LIMIT;
     if (flight.desiredAltitude !== undefined) finalAltitude = flight.desiredAltitude;
-    finalAltitude = enterSurface
+    finalAltitude = enterSurface || enterDreamer
       ? Math.max(3, Math.min(finalAltitude, 120_000))
       : flight.regionalOverview
         ? Math.max(20_000, Math.min(finalAltitude, ORBITAL_DESCENT_LIMIT))
@@ -69,6 +72,7 @@ export function MarsCameraController() {
       rotation: new THREE.Quaternion().setFromUnitVectors(startDirection, endDirection),
       quick: flight.quick,
       enterSurface,
+      enterDreamer,
       regionalOverview: flight.regionalOverview ?? false,
     };
     controls.current.enabled = false;
@@ -78,7 +82,7 @@ export function MarsCameraController() {
     const control = controls.current;
     if (!control) return;
     const currentFlight = activeFlight.current;
-    const surfaceDescentInProgress = currentFlight?.enterSurface ?? false;
+    const surfaceDescentInProgress = Boolean(currentFlight?.enterSurface || currentFlight?.enterDreamer);
     if (currentFlight) {
       currentFlight.elapsed += Math.min(delta, 0.05);
       const raw = Math.min(1, currentFlight.elapsed / currentFlight.duration);
@@ -92,10 +96,12 @@ export function MarsCameraController() {
       camera.lookAt(control.target);
       if (raw >= 1) {
         const shouldEnterSurface = currentFlight.enterSurface;
+        const shouldEnterDreamer = currentFlight.enterDreamer;
         activeFlight.current = null;
         control.enabled = true;
         clearFlight();
         if (shouldEnterSurface) { enterSurfaceView(); return; }
+        if (shouldEnterDreamer) { enterDreamerView(); return; }
       }
     }
 

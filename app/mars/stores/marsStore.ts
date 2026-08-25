@@ -16,12 +16,16 @@ type Flight = {
   quick: boolean;
   desiredAltitude?: number;
   enterSurface?: boolean;
+  enterDreamer?: boolean;
   regionalOverview?: boolean;
   focusTarget?: THREE.Vector3;
 };
 
 type MarsState = {
   surfaceView: boolean;
+  dreamerView: boolean;
+  dreamerArmed: boolean;
+  dreamerPoint: MarsPoint | null;
   routeOverview: boolean;
   activeStationId: RoverStation['id'];
   hover: MarsPoint | null;
@@ -41,7 +45,11 @@ type MarsState = {
   setTelemetry: (payload: Partial<Pick<MarsState, 'cameraPoint' | 'altitude' | 'zoom' | 'mode' | 'fps'>>) => void;
   clearFlight: () => void;
   enterSurfaceView: () => void;
+  enterDreamerView: () => void;
   exitSurfaceView: () => void;
+  exitDreamerView: () => void;
+  toggleDreamerMode: () => void;
+  visitDreamPoint: (point: MarsPoint) => void;
   visitStation: (id: RoverStation['id']) => void;
 };
 
@@ -58,6 +66,9 @@ export const useMarsStore = create<MarsState>((set) => ({
   terrainNotice: 0,
   flight: null,
   surfaceView: false,
+  dreamerView: false,
+  dreamerArmed: false,
+  dreamerPoint: null,
   routeOverview: false,
   activeStationId: 'airey',
   setHover: (hover) => set({ hover }),
@@ -65,6 +76,7 @@ export const useMarsStore = create<MarsState>((set) => ({
   rejectTerrainVisit: () => set({ terrainNotice: performance.now() }),
   orbitOut: () => set((state) => ({
     routeOverview: false,
+    dreamerArmed: false,
     selected: null,
     flight: {
       destination: state.cameraPoint.position.clone(),
@@ -85,6 +97,8 @@ export const useMarsStore = create<MarsState>((set) => ({
       activeStationId: landing.id,
       selected: { position: stationPosition(landing), latitude: landing.latitude, longitude: landing.longitude, elevation: 0 },
       surfaceView: false,
+      dreamerView: false,
+      dreamerArmed: false,
       routeOverview: true,
       flight: {
         destination,
@@ -98,7 +112,29 @@ export const useMarsStore = create<MarsState>((set) => ({
   setTelemetry: (payload) => set(payload),
   clearFlight: () => set({ flight: null }),
   enterSurfaceView: () => set({ surfaceView: true, routeOverview: false, flight: null, mode: 'ROVER' }),
+  enterDreamerView: () => set({ dreamerView: true, dreamerArmed: false, routeOverview: false, flight: null, mode: 'DREAMER' }),
   exitSurfaceView: () => set({ surfaceView: false, routeOverview: false, mode: 'ORBITAL', altitude: 1_800_000 }),
+  exitDreamerView: () => set({ dreamerView: false, dreamerArmed: false, routeOverview: false, selected: null, mode: 'ORBITAL', altitude: 1_800_000 }),
+  toggleDreamerMode: () => set((state) => ({
+    dreamerArmed: !state.dreamerArmed,
+    routeOverview: false,
+    selected: null,
+  })),
+  visitDreamPoint: (point) => set({
+    dreamerPoint: point,
+    selected: point,
+    dreamerArmed: false,
+    routeOverview: false,
+    surfaceView: false,
+    dreamerView: false,
+    flight: {
+      destination: point.position.clone(),
+      requestedAt: performance.now(),
+      quick: false,
+      desiredAltitude: 3,
+      enterDreamer: true,
+    },
+  }),
   visitStation: (id) => {
     const station = getRoverStation(id);
     const position = stationPosition(station);
@@ -107,6 +143,8 @@ export const useMarsStore = create<MarsState>((set) => ({
       ? {
           activeStationId: id,
           selected,
+          dreamerArmed: false,
+          dreamerView: false,
           routeOverview: false,
           flight: null,
           mode: 'ROVER',
@@ -114,6 +152,8 @@ export const useMarsStore = create<MarsState>((set) => ({
       : {
           activeStationId: id,
           selected,
+          dreamerArmed: false,
+          dreamerView: false,
           surfaceView: false,
           routeOverview: false,
           flight: {
