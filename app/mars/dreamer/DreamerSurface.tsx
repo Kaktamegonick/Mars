@@ -1,35 +1,158 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
+import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import * as THREE from 'three';
 import { useMarsStore } from '../stores/marsStore';
 import { formatElevation, formatLatitude, formatLongitude } from '../utils/coordinates';
 
-const DREAMER_PHOTO = '/mars-data/dreamer-mars-photo.png';
+const DREAMER_PANORAMA = '/mars-data/dreamer-mars-360.png';
 
 type LookTelemetry = { heading: number; pitch: number; fov: number };
-type PhotoView = { x: number; y: number; zoom: number };
 type WindParticle = { x: number; y: number; speed: number; drift: number; length: number; size: number; alpha: number };
 type VisorParticle = { angle: number; distance: number; depth: number; speed: number; size: number; alpha: number };
+type NearParticle = { x: number; y: number; velocityX: number; velocityY: number; size: number; alpha: number; life: number; maxLife: number };
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemetry: (telemetry: LookTelemetry) => void }) {
-  const [view, setView] = useState<PhotoView>({ x: 0, y: 0, zoom: 1.045 });
-  const drag = useRef({ active: false, x: 0, y: 0 });
-  const dustCanvas = useRef<HTMLCanvasElement>(null);
+function DreamerPanoramaTexture({ onReady }: { onReady: () => void }) {
+  const loadedTexture = useLoader(THREE.TextureLoader, DREAMER_PANORAMA);
+  const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy());
+  const texture = useMemo(() => {
+    const panorama = loadedTexture.clone();
+    panorama.colorSpace = THREE.SRGBColorSpace;
+    panorama.wrapS = THREE.RepeatWrapping;
+    panorama.anisotropy = Math.min(8, maxAnisotropy);
+    panorama.minFilter = THREE.LinearMipmapLinearFilter;
+    panorama.magFilter = THREE.LinearFilter;
+    panorama.needsUpdate = true;
+    return panorama;
+  }, [loadedTexture, maxAnisotropy]);
+
+  useEffect(() => () => texture.dispose(), [texture]);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(onReady);
+    return () => window.cancelAnimationFrame(frame);
+  }, [onReady, texture]);
+
+  return (
+    <mesh rotation={[0, -Math.PI / 2, 0]}>
+      <sphereGeometry args={[10, 128, 72]} />
+      <meshBasicMaterial map={texture} side={THREE.BackSide} toneMapped={false} />
+    </mesh>
+  );
+}
+
+function DreamerLookController({ onTelemetry }: { onTelemetry: (telemetry: LookTelemetry) => void }) {
+  const { gl } = useThree();
+  const yaw = useRef(0);
+  const pitch = useRef(-0.025);
+  const fov = useRef(58);
+
+  const reportView = useCallback(() => {
+    onTelemetry({
+      heading: (225 + THREE.MathUtils.radToDeg(yaw.current) + 3600) % 360,
+      pitch: THREE.MathUtils.radToDeg(pitch.current),
+      fov: fov.current,
+    });
+  }, [onTelemetry]);
+
+  const changeFov = useCallback((amount: number) => {
+    fov.current = THREE.MathUtils.clamp(fov.current + amount, 34, 70);
+    reportView();
+  }, [reportView]);
 
   useEffect(() => {
-    let active = true;
-    const image = new Image();
-    const ready = () => { if (active) onReady(); };
-    image.onload = ready;
-    image.onerror = ready;
-    image.src = DREAMER_PHOTO;
-    if (image.complete) ready();
-    return () => { active = false; };
-  }, [onReady]);
+    const element = gl.domElement;
+    const pointers = new Map<number, PointerEvent>();
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    let pinchDistance: number | null = null;
+
+    const down = (event: PointerEvent) => {
+      pointers.set(event.pointerId, event);
+      dragging = pointers.size === 1;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      element.setPointerCapture(event.pointerId);
+    };
+    const move = (event: PointerEvent) => {
+      pointers.set(event.pointerId, event);
+      if (pointers.size === 2) {
+        const [first, second] = [...pointers.values()];
+        const distance = Math.hypot(first.clientX - second.clientX, first.clientY - second.clientY);
+        if (pinchDistance !== null) changeFov((pinchDistance - distance) * 0.075);
+        pinchDistance = distance;
+        dragging = false;
+        return;
+      }
+      if (!dragging) return;
+      yaw.current -= (event.clientX - previousX) * 0.0031;
+      pitch.current = THREE.MathUtils.clamp(pitch.current - (event.clientY - previousY) * 0.00235, -0.76, 0.58);
+      previousX = event.clientX;
+      previousY = event.clientY;
+      reportView();
+    };
+    const up = (event: PointerEvent) => {
+      pointers.delete(event.pointerId);
+      dragging = false;
+      pinchDistance = null;
+      if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
+    };
+    const wheel = (event: WheelEvent) => {
+      event.preventDefault();
+      changeFov(event.deltaY * 0.016);
+    };
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') yaw.current += 0.055;
+      else if (event.key === 'ArrowRight') yaw.current -= 0.055;
+      else if (event.key === 'ArrowUp') pitch.current = Math.min(0.58, pitch.current + 0.04);
+      else if (event.key === 'ArrowDown') pitch.current = Math.max(-0.76, pitch.current - 0.04);
+      else if (event.key === '+' || event.key === '=') changeFov(-4);
+      else if (event.key === '-' || event.key === '_') changeFov(4);
+      else if (event.key === '0') {
+        yaw.current = 0;
+        pitch.current = -0.025;
+        fov.current = 58;
+      } else return;
+      reportView();
+    };
+
+    element.addEventListener('pointerdown', down);
+    element.addEventListener('pointermove', move);
+    element.addEventListener('pointerup', up);
+    element.addEventListener('pointercancel', up);
+    element.addEventListener('wheel', wheel, { passive: false });
+    window.addEventListener('keydown', keydown);
+    reportView();
+    return () => {
+      element.removeEventListener('pointerdown', down);
+      element.removeEventListener('pointermove', move);
+      element.removeEventListener('pointerup', up);
+      element.removeEventListener('pointercancel', up);
+      element.removeEventListener('wheel', wheel);
+      window.removeEventListener('keydown', keydown);
+    };
+  }, [changeFov, gl, reportView]);
+
+  useFrame(({ camera }) => {
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = yaw.current;
+    camera.rotation.x = pitch.current;
+    const perspective = camera as THREE.PerspectiveCamera;
+    if (perspective.fov !== fov.current) {
+      perspective.fov = fov.current;
+      perspective.updateProjectionMatrix();
+    }
+  });
+  return null;
+}
+
+function DreamerPanorama({ onReady, onTelemetry }: { onReady: () => void; onTelemetry: (telemetry: LookTelemetry) => void }) {
+  const dustCanvas = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = dustCanvas.current;
@@ -44,6 +167,20 @@ function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemet
     let height = 1;
     let wind: WindParticle[] = [];
     let visor: VisorParticle[] = [];
+    let near: NearParticle[] = [];
+
+    const resetNearParticle = (particle: NearParticle, stagger = false) => {
+      const fromLeft = Math.random() > 0.5;
+      const upperEdge = Math.random() > 0.54;
+      particle.x = fromLeft ? -20 - Math.random() * 60 : width + 20 + Math.random() * 60;
+      particle.y = upperEdge ? Math.random() * height * 0.25 : height * (0.72 + Math.random() * 0.28);
+      particle.velocityX = (fromLeft ? 1 : -1) * (34 + Math.random() * 62);
+      particle.velocityY = -13 + Math.random() * 26;
+      particle.size = 2.4 + Math.random() * 5.6;
+      particle.alpha = 0.055 + Math.random() * 0.1;
+      particle.maxLife = 3.8 + Math.random() * 4.5;
+      particle.life = stagger ? Math.random() * particle.maxLife : 0;
+    };
 
     const createParticles = () => {
       const density = clamp(Math.floor((width * height) / 10_500), 68, 150);
@@ -64,6 +201,11 @@ function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemet
         size: 0.45 + Math.random() * 1.15,
         alpha: 0.08 + Math.random() * 0.18,
       }));
+      near = Array.from({ length: 7 }, () => {
+        const particle: NearParticle = { x: 0, y: 0, velocityX: 0, velocityY: 0, size: 0, alpha: 0, life: 0, maxLife: 1 };
+        resetNearParticle(particle, true);
+        return particle;
+      });
     };
 
     const resize = () => {
@@ -96,7 +238,7 @@ function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemet
           particle.y = Math.random() * height;
         }
         const fade = 0.42 + Math.sin(time * 0.0007 + particle.y) * 0.14;
-        context.strokeStyle = `rgba(244, 174, 116, ${particle.alpha * fade})`;
+        context.strokeStyle = `rgba(218, 167, 125, ${particle.alpha * fade})`;
         context.lineWidth = particle.size;
         context.beginPath();
         context.moveTo(particle.x, particle.y);
@@ -117,9 +259,26 @@ function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemet
         const x = centreX + Math.cos(particle.angle) * particle.distance * expansion;
         const y = centreY + Math.sin(particle.angle) * particle.distance * expansion * 0.72;
         const radius = particle.size * (0.4 + particle.depth * 2.7);
-        context.fillStyle = `rgba(255, 196, 137, ${particle.alpha * particle.depth})`;
+        context.fillStyle = `rgba(238, 190, 148, ${particle.alpha * particle.depth})`;
         context.beginPath();
         context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      for (const particle of near) {
+        particle.life += delta;
+        particle.x += particle.velocityX * delta;
+        particle.y += particle.velocityY * delta;
+        if (particle.life > particle.maxLife || particle.x < -100 || particle.x > width + 100) resetNearParticle(particle);
+        const lifeProgress = particle.life / particle.maxLife;
+        const opacity = Math.sin(Math.min(1, lifeProgress) * Math.PI) * particle.alpha;
+        const gradient = context.createRadialGradient(particle.x, particle.y, 0, particle.x, particle.y, particle.size * 1.8);
+        gradient.addColorStop(0, `rgba(238, 196, 157, ${opacity})`);
+        gradient.addColorStop(0.42, `rgba(174, 116, 80, ${opacity * 0.48})`);
+        gradient.addColorStop(1, 'rgba(120, 78, 56, 0)');
+        context.fillStyle = gradient;
+        context.beginPath();
+        context.ellipse(particle.x, particle.y, particle.size * 1.8, particle.size, particle.velocityY * 0.015, 0, Math.PI * 2);
         context.fill();
       }
 
@@ -129,7 +288,7 @@ function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemet
     const restart = () => {
       window.cancelAnimationFrame(animationFrame);
       previousTime = performance.now();
-      if (!motionQuery.matches) animationFrame = window.requestAnimationFrame(draw);
+      if (!motionQuery.matches && !document.hidden) animationFrame = window.requestAnimationFrame(draw);
       else context.clearRect(0, 0, width, height);
     };
     const observer = new ResizeObserver(resize);
@@ -137,90 +296,32 @@ function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemet
     resize();
     restart();
     motionQuery.addEventListener('change', restart);
+    document.addEventListener('visibilitychange', restart);
 
     return () => {
       observer.disconnect();
       motionQuery.removeEventListener('change', restart);
+      document.removeEventListener('visibilitychange', restart);
       window.cancelAnimationFrame(animationFrame);
     };
   }, []);
 
-  useEffect(() => {
-    onTelemetry({
-      heading: (225 + view.x * 2.4 + 360) % 360,
-      pitch: view.y * -1.7,
-      fov: 58 - (view.zoom - 1.045) * 92,
-    });
-  }, [onTelemetry, view]);
-
-  useEffect(() => {
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowLeft') setView((current) => ({ ...current, x: clamp(current.x + 0.45, -2.4, 2.4) }));
-      if (event.key === 'ArrowRight') setView((current) => ({ ...current, x: clamp(current.x - 0.45, -2.4, 2.4) }));
-      if (event.key === 'ArrowUp') setView((current) => ({ ...current, y: clamp(current.y + 0.32, -1.5, 1.5) }));
-      if (event.key === 'ArrowDown') setView((current) => ({ ...current, y: clamp(current.y - 0.32, -1.5, 1.5) }));
-      if (event.key === '+' || event.key === '=') setView((current) => ({ ...current, zoom: clamp(current.zoom + 0.025, 1.045, 1.17) }));
-      if (event.key === '-' || event.key === '_') setView((current) => ({ ...current, zoom: clamp(current.zoom - 0.025, 1.045, 1.17) }));
-      if (event.key === '0') setView({ x: 0, y: 0, zoom: 1.045 });
-    };
-    window.addEventListener('keydown', keydown);
-    return () => window.removeEventListener('keydown', keydown);
-  }, []);
-
-  const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    drag.current = { active: true, x: event.clientX, y: event.clientY };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!drag.current.active) return;
-    const deltaX = event.clientX - drag.current.x;
-    const deltaY = event.clientY - drag.current.y;
-    drag.current.x = event.clientX;
-    drag.current.y = event.clientY;
-    setView((current) => ({
-      ...current,
-      x: clamp(current.x + deltaX * 0.007, -2.4, 2.4),
-      y: clamp(current.y + deltaY * 0.006, -1.5, 1.5),
-    }));
-  };
-
-  const stopDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    drag.current.active = false;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-  };
-
-  const zoomPhoto = (event: ReactWheelEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setView((current) => ({ ...current, zoom: clamp(current.zoom + event.deltaY * 0.00028, 1.045, 1.17) }));
-  };
-
-  const photoStyle = {
-    '--photo-far-x': `${view.x * 0.18}%`,
-    '--photo-far-y': `${view.y * 0.14}%`,
-    '--photo-mid-x': `${view.x * 0.5}%`,
-    '--photo-mid-y': `${view.y * 0.38}%`,
-    '--photo-near-x': `${view.x}%`,
-    '--photo-near-y': `${view.y * 0.72}%`,
-    '--photo-scale': view.zoom,
-  } as CSSProperties;
-
   return (
-    <div
-      className="dreamer-photo"
-      style={photoStyle}
-      aria-hidden="true"
-      onPointerDown={startDrag}
-      onPointerMove={moveDrag}
-      onPointerUp={stopDrag}
-      onPointerCancel={stopDrag}
-      onWheel={zoomPhoto}
-    >
-      <div className="dreamer-photo-layer dreamer-photo-far" />
-      <div className="dreamer-photo-layer dreamer-photo-mid" />
-      <div className="dreamer-photo-layer dreamer-photo-near" />
+    <div className="dreamer-panorama" aria-hidden="true">
+      <Canvas
+        camera={{ position: [0, 0, 0.001], fov: 58, near: 0.01, far: 30 }}
+        dpr={[1, 1.5]}
+        gl={{ antialias: true, powerPreference: 'high-performance' }}
+      >
+        <color attach="background" args={['#8a4f37']} />
+        <Suspense fallback={null}><DreamerPanoramaTexture onReady={onReady} /></Suspense>
+        <DreamerLookController onTelemetry={onTelemetry} />
+      </Canvas>
+      <div className="dreamer-distance-haze" />
       <div className="dreamer-dust-haze" />
       <canvas ref={dustCanvas} className="dreamer-dust" />
+      <div className="dreamer-edge-depth" />
+      <div className="dreamer-visor-optics" />
     </div>
   );
 }
@@ -281,7 +382,7 @@ export function DreamerSurface() {
 
   return (
     <section className={`dreamer-view${uiHidden ? ' ui-hidden' : ''}`} aria-label="Dreamer mode imagined Mars surface">
-      <DreamerPhoto onReady={markReady} onTelemetry={updateTelemetry} />
+      <DreamerPanorama onReady={markReady} onTelemetry={updateTelemetry} />
 
       <div className="dreamer-helmet" aria-hidden="true">
         <div className="helmet-crown" />
@@ -338,7 +439,7 @@ export function DreamerSurface() {
         <div className="dreamer-reticle" aria-hidden="true"><span /><i /><b /></div>
 
         <footer className="dreamer-footer">
-          <span>DRAG / SWIPE · PARALLAX</span><span>SCROLL · ZOOM</span><span>H · HUD</span><span>F · {fullscreen ? 'WINDOW' : 'FULLSCREEN'}</span>
+          <span>DRAG / SWIPE · 360° LOOK</span><span>SCROLL · ZOOM</span><span>H · HUD</span><span>F · {fullscreen ? 'WINDOW' : 'FULLSCREEN'}</span>
           <b>IMAGINED VIEW · NOT A ROVER PHOTOGRAPH</b>
         </footer>
       </div>
