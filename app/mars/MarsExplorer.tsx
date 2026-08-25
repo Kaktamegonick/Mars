@@ -12,7 +12,8 @@ import { MroTrajectory } from './orbit/MroTrajectory';
 
 export default function MarsExplorer() {
   const surfaceView = useMarsStore((state) => state.surfaceView);
-  if (surfaceView) return <SurfacePanorama />;
+  const activeStationId = useMarsStore((state) => state.activeStationId);
+  if (surfaceView) return <SurfacePanorama key={activeStationId} />;
   return (
     <main className="explorer-shell">
       <Canvas

@@ -20,6 +20,7 @@ export function HUD() {
   const routeOverview = useMarsStore((state) => state.routeOverview);
   const viewPerseveranceRoute = useMarsStore((state) => state.viewPerseveranceRoute);
   const activeStationId = useMarsStore((state) => state.activeStationId);
+  const focusStation = useMarsStore((state) => state.focusStation);
   const visitStation = useMarsStore((state) => state.visitStation);
   const activeStation = getRoverStation(activeStationId);
 
@@ -36,16 +37,16 @@ export function HUD() {
       <header className="topbar">
         <div className="wordmark"><span className="mission-mark">M</span><div><b>MARS</b><small>EXPLORER / MISSION 01</small></div></div>
         <div className="top-actions">
-          <button className="route-button" onClick={viewPerseveranceRoute}>↗ PERSEVERANCE PATH</button>
-          <button className="surface-button" onClick={() => visitStation(activeStationId)}>↓ DESCEND · {activeStation.rover.toUpperCase()}</button>
-          <button className="orbit-button" onClick={orbitOut} aria-label="Center the full globe">◎ CENTER GLOBE</button>
+          <button className="route-button" disabled={Boolean(flight)} onClick={viewPerseveranceRoute}>↗ PERSEVERANCE PATH</button>
+          <button className="surface-button" disabled={Boolean(flight)} onClick={() => visitStation(activeStationId)}>↓ DESCEND · {activeStation.rover.toUpperCase()}</button>
+          <button className="orbit-button" disabled={Boolean(flight)} onClick={orbitOut} aria-label="Center the full globe">◎ CENTER GLOBE</button>
           <div className="live-pill locked"><i /> VERIFIED SITES ONLY</div>
         </div>
       </header>
 
       {!routeOverview && <section className="hero-copy">
         <p>ORBITAL CARTOGRAPHY / VERIFIED SURFACE ARCHIVE</p><h1>Touch the<br /><em>red planet.</em></h1>
-        <span>Explore the globe · click a rover flag to reach an authentic camera view</span>
+        <span>Drag to rotate · choose a rover · descend into an authentic camera view</span>
         <div className="mission-path"><b>01</b><span>EXPLORE ORBIT</span><i /><b>02</b><span>CHOOSE ROVER SITE</span></div>
       </section>}
 
@@ -73,7 +74,7 @@ export function HUD() {
       </button>
 
       {catalogOpen && (
-        <aside className="mission-drawer" id="mission-index">
+        <aside className="mission-drawer" id="mission-index" role="dialog" aria-modal="true" aria-label="Rover mission index">
           <div className="drawer-head"><p className="panel-label">ROVERS / CHRONOLOGICAL</p><button onClick={() => setCatalogOpen(false)} aria-label="Close mission index">×</button></div>
           <nav className="rover-sites" aria-label="Verified Mars rover routes">
             {ROVER_ROUTES.map((route, index) => {
@@ -81,14 +82,14 @@ export function HUD() {
               const cameraStops = route.stations.filter((station) => station.image).length;
               const active = route.rover === activeStation.rover;
               return (
-              <button key={route.rover} className={active ? 'active' : ''} onClick={() => { setCatalogOpen(false); visitStation(firstStation.id); }}>
+              <button key={route.rover} className={active ? 'active' : ''} aria-pressed={active} onClick={() => { setCatalogOpen(false); focusStation(firstStation.id); }}>
                 <span>{String(index + 1).padStart(2, '0')}</span>
                 <b>{route.rover} · {route.mission}</b>
                 <small>{route.year} · {cameraStops} CAMERA STOP{cameraStops === 1 ? '' : 'S'} · {route.operator}</small>
               </button>
               );
             })}
-            <i>SELECT A ROVER, THEN FOLLOW ITS VERIFIED CAMERA STOPS WITH THE ROUTE ARROWS</i>
+            <i>SELECT A ROVER TO FOCUS ITS LANDING SITE, THEN USE DESCEND TO OPEN THE CAMERA ARCHIVE</i>
           </nav>
 
           <section className="orbit-legend">
@@ -119,7 +120,7 @@ export function HUD() {
         </aside>
       )}
 
-      <div className={`flight-status ${flight ? 'visible' : ''}`}><span /> {flight?.enterSurface ? 'DESCENDING TO VERIFIED ROVER SITE' : 'REPOSITIONING IN SAFE ORBIT'}</div>
+      <div className={`flight-status ${flight ? 'visible' : ''}`} role="status" aria-live="polite"><span /> {flight?.enterSurface ? 'DESCENDING TO VERIFIED ROVER SITE' : 'REPOSITIONING IN SAFE ORBIT'}</div>
       {terrainNotice > 0 && (
         <div key={terrainNotice} className="surface-notice" role="status">
           <span>DESCENT UNAVAILABLE</span>

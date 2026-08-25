@@ -42,6 +42,7 @@ type MarsState = {
   clearFlight: () => void;
   enterSurfaceView: () => void;
   exitSurfaceView: () => void;
+  focusStation: (id: RoverStation['id']) => void;
   visitStation: (id: RoverStation['id']) => void;
 };
 
@@ -99,7 +100,7 @@ export const useMarsStore = create<MarsState>((set) => ({
   clearFlight: () => set({ flight: null }),
   enterSurfaceView: () => set({ surfaceView: true, routeOverview: false, flight: null, mode: 'ROVER' }),
   exitSurfaceView: () => set({ surfaceView: false, routeOverview: false, mode: 'ORBITAL', altitude: 1_800_000 }),
-  visitStation: (id) => {
+  focusStation: (id) => {
     const station = getRoverStation(id);
     const position = stationPosition(station);
     const selected = { position, latitude: station.latitude, longitude: station.longitude, elevation: 0 };
@@ -111,10 +112,35 @@ export const useMarsStore = create<MarsState>((set) => ({
       flight: {
         destination: position.clone(),
         requestedAt: performance.now(),
-        quick: false,
-        desiredAltitude: 3,
-        enterSurface: true,
+        quick: true,
+        desiredAltitude: 320_000,
       },
     });
+  },
+  visitStation: (id) => {
+    const station = getRoverStation(id);
+    const position = stationPosition(station);
+    const selected = { position, latitude: station.latitude, longitude: station.longitude, elevation: 0 };
+    set((state) => state.surfaceView
+      ? {
+          activeStationId: id,
+          selected,
+          routeOverview: false,
+          flight: null,
+          mode: 'ROVER',
+        }
+      : {
+          activeStationId: id,
+          selected,
+          surfaceView: false,
+          routeOverview: false,
+          flight: {
+            destination: position.clone(),
+            requestedAt: performance.now(),
+            quick: false,
+            desiredAltitude: 3,
+            enterSurface: true,
+          },
+        });
   },
 }));

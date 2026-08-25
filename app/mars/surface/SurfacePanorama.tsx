@@ -264,7 +264,7 @@ export function SurfacePanorama() {
       <nav className="surface-stations" aria-label={`${station.rover} camera route`}>
         <p><span>ROVER ROUTE</span><b>{routeIndex + 1} / {route.stations.length}</b></p>
         {route.stations.map((item, index) => (
-          <button key={item.id} className={item.id === station.id ? 'active' : ''} onClick={() => visitStation(item.id)}>
+          <button key={item.id} className={item.id === station.id ? 'active' : ''} aria-current={item.id === station.id ? 'location' : undefined} onClick={() => visitStation(item.id)}>
             <span>{String(index + 1).padStart(2, '0')}</span><b>{item.rover}</b><small>{item.name}</small>
           </button>
         ))}
