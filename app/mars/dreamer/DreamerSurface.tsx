@@ -8,6 +8,8 @@ const DREAMER_PHOTO = '/mars-data/dreamer-mars-photo.png';
 
 type LookTelemetry = { heading: number; pitch: number; fov: number };
 type PhotoView = { x: number; y: number; zoom: number };
+type WindParticle = { x: number; y: number; speed: number; drift: number; length: number; size: number; alpha: number };
+type VisorParticle = { angle: number; distance: number; depth: number; speed: number; size: number; alpha: number };
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -16,6 +18,7 @@ function clamp(value: number, minimum: number, maximum: number) {
 function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemetry: (telemetry: LookTelemetry) => void }) {
   const [view, setView] = useState<PhotoView>({ x: 0, y: 0, zoom: 1.045 });
   const drag = useRef({ active: false, x: 0, y: 0 });
+  const dustCanvas = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -29,6 +32,120 @@ function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemet
   }, [onReady]);
 
   useEffect(() => {
+    const canvas = dustCanvas.current;
+    if (!canvas) return;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let animationFrame = 0;
+    let previousTime = performance.now();
+    let width = 1;
+    let height = 1;
+    let wind: WindParticle[] = [];
+    let visor: VisorParticle[] = [];
+
+    const createParticles = () => {
+      const density = clamp(Math.floor((width * height) / 10_500), 68, 150);
+      wind = Array.from({ length: density }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        speed: 45 + Math.random() * 120,
+        drift: -9 + Math.random() * 20,
+        length: 5 + Math.random() * 23,
+        size: 0.35 + Math.random() * 1.05,
+        alpha: 0.035 + Math.random() * 0.16,
+      }));
+      visor = Array.from({ length: Math.round(density * 0.2) }, () => ({
+        angle: Math.random() * Math.PI * 2,
+        distance: 12 + Math.random() * Math.min(width, height) * 0.34,
+        depth: Math.random(),
+        speed: 0.13 + Math.random() * 0.28,
+        size: 0.45 + Math.random() * 1.15,
+        alpha: 0.08 + Math.random() * 0.18,
+      }));
+    };
+
+    const resize = () => {
+      const bounds = canvas.getBoundingClientRect();
+      width = Math.max(1, bounds.width);
+      height = Math.max(1, bounds.height);
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.round(width * pixelRatio);
+      canvas.height = Math.round(height * pixelRatio);
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      createParticles();
+    };
+
+    const draw = (time: number) => {
+      if (motionQuery.matches) {
+        context.clearRect(0, 0, width, height);
+        return;
+      }
+
+      const delta = Math.min((time - previousTime) / 1000, 0.04);
+      previousTime = time;
+      context.clearRect(0, 0, width, height);
+      context.lineCap = 'round';
+
+      for (const particle of wind) {
+        particle.x += particle.speed * delta;
+        particle.y += particle.drift * delta;
+        if (particle.x > width + particle.length || particle.y < -12 || particle.y > height + 12) {
+          particle.x = -particle.length - Math.random() * width * 0.08;
+          particle.y = Math.random() * height;
+        }
+        const fade = 0.42 + Math.sin(time * 0.0007 + particle.y) * 0.14;
+        context.strokeStyle = `rgba(244, 174, 116, ${particle.alpha * fade})`;
+        context.lineWidth = particle.size;
+        context.beginPath();
+        context.moveTo(particle.x, particle.y);
+        context.lineTo(particle.x - particle.length, particle.y - particle.drift * 0.025);
+        context.stroke();
+      }
+
+      const centreX = width * 0.5;
+      const centreY = height * 0.48;
+      for (const particle of visor) {
+        particle.depth += particle.speed * delta;
+        if (particle.depth > 1) {
+          particle.depth = 0.03;
+          particle.angle = Math.random() * Math.PI * 2;
+          particle.distance = 12 + Math.random() * Math.min(width, height) * 0.34;
+        }
+        const expansion = 0.55 + particle.depth * particle.depth * 3.2;
+        const x = centreX + Math.cos(particle.angle) * particle.distance * expansion;
+        const y = centreY + Math.sin(particle.angle) * particle.distance * expansion * 0.72;
+        const radius = particle.size * (0.4 + particle.depth * 2.7);
+        context.fillStyle = `rgba(255, 196, 137, ${particle.alpha * particle.depth})`;
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      animationFrame = window.requestAnimationFrame(draw);
+    };
+
+    const restart = () => {
+      window.cancelAnimationFrame(animationFrame);
+      previousTime = performance.now();
+      if (!motionQuery.matches) animationFrame = window.requestAnimationFrame(draw);
+      else context.clearRect(0, 0, width, height);
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+    resize();
+    restart();
+    motionQuery.addEventListener('change', restart);
+
+    return () => {
+      observer.disconnect();
+      motionQuery.removeEventListener('change', restart);
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, []);
+
+  useEffect(() => {
     onTelemetry({
       heading: (225 + view.x * 2.4 + 360) % 360,
       pitch: view.y * -1.7,
@@ -38,10 +155,10 @@ function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemet
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowLeft') setView((current) => ({ ...current, x: clamp(current.x + 0.7, -4.5, 4.5) }));
-      if (event.key === 'ArrowRight') setView((current) => ({ ...current, x: clamp(current.x - 0.7, -4.5, 4.5) }));
-      if (event.key === 'ArrowUp') setView((current) => ({ ...current, y: clamp(current.y + 0.5, -2.6, 2.6) }));
-      if (event.key === 'ArrowDown') setView((current) => ({ ...current, y: clamp(current.y - 0.5, -2.6, 2.6) }));
+      if (event.key === 'ArrowLeft') setView((current) => ({ ...current, x: clamp(current.x + 0.45, -2.4, 2.4) }));
+      if (event.key === 'ArrowRight') setView((current) => ({ ...current, x: clamp(current.x - 0.45, -2.4, 2.4) }));
+      if (event.key === 'ArrowUp') setView((current) => ({ ...current, y: clamp(current.y + 0.32, -1.5, 1.5) }));
+      if (event.key === 'ArrowDown') setView((current) => ({ ...current, y: clamp(current.y - 0.32, -1.5, 1.5) }));
       if (event.key === '+' || event.key === '=') setView((current) => ({ ...current, zoom: clamp(current.zoom + 0.025, 1.045, 1.17) }));
       if (event.key === '-' || event.key === '_') setView((current) => ({ ...current, zoom: clamp(current.zoom - 0.025, 1.045, 1.17) }));
       if (event.key === '0') setView({ x: 0, y: 0, zoom: 1.045 });
@@ -63,8 +180,8 @@ function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemet
     drag.current.y = event.clientY;
     setView((current) => ({
       ...current,
-      x: clamp(current.x + deltaX * 0.012, -4.5, 4.5),
-      y: clamp(current.y + deltaY * 0.01, -2.6, 2.6),
+      x: clamp(current.x + deltaX * 0.007, -2.4, 2.4),
+      y: clamp(current.y + deltaY * 0.006, -1.5, 1.5),
     }));
   };
 
@@ -79,8 +196,12 @@ function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemet
   };
 
   const photoStyle = {
-    '--photo-x': `${view.x}%`,
-    '--photo-y': `${view.y}%`,
+    '--photo-far-x': `${view.x * 0.18}%`,
+    '--photo-far-y': `${view.y * 0.14}%`,
+    '--photo-mid-x': `${view.x * 0.5}%`,
+    '--photo-mid-y': `${view.y * 0.38}%`,
+    '--photo-near-x': `${view.x}%`,
+    '--photo-near-y': `${view.y * 0.72}%`,
     '--photo-scale': view.zoom,
   } as CSSProperties;
 
@@ -94,7 +215,13 @@ function DreamerPhoto({ onReady, onTelemetry }: { onReady: () => void; onTelemet
       onPointerUp={stopDrag}
       onPointerCancel={stopDrag}
       onWheel={zoomPhoto}
-    />
+    >
+      <div className="dreamer-photo-layer dreamer-photo-far" />
+      <div className="dreamer-photo-layer dreamer-photo-mid" />
+      <div className="dreamer-photo-layer dreamer-photo-near" />
+      <div className="dreamer-dust-haze" />
+      <canvas ref={dustCanvas} className="dreamer-dust" />
+    </div>
   );
 }
 
