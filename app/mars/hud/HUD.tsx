@@ -20,7 +20,6 @@ export function HUD() {
   const routeOverview = useMarsStore((state) => state.routeOverview);
   const viewPerseveranceRoute = useMarsStore((state) => state.viewPerseveranceRoute);
   const activeStationId = useMarsStore((state) => state.activeStationId);
-  const focusStation = useMarsStore((state) => state.focusStation);
   const visitStation = useMarsStore((state) => state.visitStation);
   const activeStation = getRoverStation(activeStationId);
 
@@ -82,14 +81,14 @@ export function HUD() {
               const cameraStops = route.stations.filter((station) => station.image).length;
               const active = route.rover === activeStation.rover;
               return (
-              <button key={route.rover} className={active ? 'active' : ''} aria-pressed={active} onClick={() => { setCatalogOpen(false); focusStation(firstStation.id); }}>
+              <button key={route.rover} className={active ? 'active' : ''} aria-pressed={active} onClick={() => { setCatalogOpen(false); visitStation(firstStation.id); }}>
                 <span>{String(index + 1).padStart(2, '0')}</span>
                 <b>{route.rover} · {route.mission}</b>
                 <small>{route.year} · {cameraStops} CAMERA STOP{cameraStops === 1 ? '' : 'S'} · {route.operator}</small>
               </button>
               );
             })}
-            <i>SELECT A ROVER TO FOCUS ITS LANDING SITE, THEN USE DESCEND TO OPEN THE CAMERA ARCHIVE</i>
+            <i>SELECT A ROVER TO DESCEND DIRECTLY INTO ITS VERIFIED CAMERA ARCHIVE</i>
           </nav>
 
           <section className="orbit-legend">
