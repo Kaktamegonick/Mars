@@ -3,6 +3,7 @@
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import * as THREE from 'three';
+import { stepCursorInertia, useCursorInertia } from '../camera/useCursorInertia';
 import { useMarsStore } from '../stores/marsStore';
 import { formatElevation, formatLatitude, formatLongitude } from '../utils/coordinates';
 
@@ -174,6 +175,7 @@ function DreamerDustField() {
 
 function DreamerLookController({ onTelemetry }: { onTelemetry: (telemetry: LookTelemetry) => void }) {
   const { gl } = useThree();
+  const cursorMotion = useCursorInertia();
   const yaw = useRef(0);
   const pitch = useRef(-0.025);
   const fov = useRef(58);
@@ -265,10 +267,16 @@ function DreamerLookController({ onTelemetry }: { onTelemetry: (telemetry: LookT
     };
   }, [changeFov, gl, reportView]);
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera }, delta) => {
+    const cursorOffset = stepCursorInertia(
+      cursorMotion,
+      delta,
+      THREE.MathUtils.degToRad(15),
+      THREE.MathUtils.degToRad(9.5),
+    );
     camera.rotation.order = 'YXZ';
-    camera.rotation.y = yaw.current;
-    camera.rotation.x = pitch.current;
+    camera.rotation.y = yaw.current - cursorOffset.x;
+    camera.rotation.x = THREE.MathUtils.clamp(pitch.current - cursorOffset.y, -0.76, 0.58);
     const perspective = camera as THREE.PerspectiveCamera;
     if (perspective.fov !== fov.current) {
       perspective.fov = fov.current;

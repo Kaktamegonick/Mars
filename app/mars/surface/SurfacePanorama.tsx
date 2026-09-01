@@ -4,6 +4,7 @@ import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
 import Image from 'next/image';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { stepCursorInertia, useCursorInertia } from '../camera/useCursorInertia';
 import { getRoverRoute, getRoverStation, type RoverStation } from '../data/roverStations';
 import { useMarsStore } from '../stores/marsStore';
 
@@ -11,6 +12,7 @@ type ViewCommand = { action: 'zoom-in' | 'zoom-out' | 'reset'; key: number };
 
 function SurfaceLookController({ command, station }: { command: ViewCommand; station: RoverStation }) {
   const { gl } = useThree();
+  const cursorMotion = useCursorInertia();
   const view = station.panoramaView ?? {
     initialYaw: -1.2,
     initialPitch: -0.03,
@@ -95,10 +97,16 @@ function SurfaceLookController({ command, station }: { command: ViewCommand; sta
     };
   }, [changeFov, gl, view.maxPitch, view.minPitch]);
 
-  useFrame(({ camera: activeCamera }) => {
+  useFrame(({ camera: activeCamera }, delta) => {
+    const cursorOffset = stepCursorInertia(
+      cursorMotion,
+      delta,
+      THREE.MathUtils.degToRad(15),
+      THREE.MathUtils.degToRad(9.5),
+    );
     activeCamera.rotation.order = 'YXZ';
-    activeCamera.rotation.y = yaw.current;
-    activeCamera.rotation.x = pitch.current;
+    activeCamera.rotation.y = yaw.current - cursorOffset.x;
+    activeCamera.rotation.x = THREE.MathUtils.clamp(pitch.current - cursorOffset.y, view.minPitch, view.maxPitch);
     const perspective = activeCamera as THREE.PerspectiveCamera;
     if (perspective.fov !== fov.current) {
       perspective.fov = fov.current;

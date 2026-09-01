@@ -5,11 +5,14 @@ import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useMarsStore } from '../stores/marsStore';
 import { cameraMode, cartesianToMars, DISPLACEMENT_UNITS, MARS_RADIUS, METERS_PER_UNIT } from '../utils/coordinates';
+import { resetCursorInertia, stepCursorInertia, useCursorInertia } from './useCursorInertia';
 
 const ORBITAL_DESCENT_LIMIT = 320_000;
 const MINIMUM_ORBIT_RADIUS = MARS_RADIUS + ORBITAL_DESCENT_LIMIT / METERS_PER_UNIT;
 const PLANET_CENTER = new THREE.Vector3();
 const RECENTER_ALTITUDE = 900_000;
+const CURSOR_MAX_YAW = THREE.MathUtils.degToRad(10);
+const CURSOR_MAX_PITCH = THREE.MathUtils.degToRad(6.5);
 
 type ActiveFlight = {
   key: number;
@@ -34,6 +37,8 @@ export function MarsCameraController() {
   const accumulator = useRef(0);
   const frames = useRef(0);
   const fpsTimer = useRef(0);
+  const cursorMotion = useCursorInertia();
+  const appliedCursorOffset = useRef(new THREE.Vector2());
   const { camera, scene } = useThree();
   const flight = useMarsStore((state) => state.flight);
   const routeOverview = useMarsStore((state) => state.routeOverview);
@@ -75,8 +80,10 @@ export function MarsCameraController() {
       enterDreamer,
       regionalOverview: flight.regionalOverview ?? false,
     };
+    resetCursorInertia(cursorMotion);
+    appliedCursorOffset.current.set(0, 0);
     controls.current.enabled = false;
-  }, [camera, flight]);
+  }, [camera, cursorMotion, flight]);
 
   useFrame((_, delta) => {
     const control = controls.current;
@@ -113,6 +120,22 @@ export function MarsCameraController() {
     if (!routeOverview && !currentFlight && radialAltitude > RECENTER_ALTITUDE) {
       const recenter = 1 - Math.exp(-delta * 3.6);
       control.target.lerp(PLANET_CENTER, recenter);
+    }
+
+    if (!currentFlight) {
+      const cursorOffset = stepCursorInertia(cursorMotion, delta, CURSOR_MAX_YAW, CURSOR_MAX_PITCH);
+      const yaw = cursorOffset.x - appliedCursorOffset.current.x;
+      const pitch = cursorOffset.y - appliedCursorOffset.current.y;
+      if (Math.abs(yaw) + Math.abs(pitch) > 1e-7) {
+        const relativePosition = camera.position.clone().sub(control.target);
+        const screenUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion).normalize();
+        const screenRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
+        relativePosition.applyAxisAngle(screenUp, -yaw);
+        relativePosition.applyAxisAngle(screenRight, -pitch);
+        camera.position.copy(control.target).add(relativePosition);
+        camera.lookAt(control.target);
+      }
+      appliedCursorOffset.current.copy(cursorOffset);
     }
 
     const inward = camera.position.clone().negate().normalize();
